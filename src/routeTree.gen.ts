@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppBuktiPotongIndexRouteImport } from './routes/_app/bukti-potong/index'
 import { Route as AppElemenIndexRouteImport } from './routes/_app/elemen/index'
+import { Route as AppGoogleSheetsIndexRouteImport } from './routes/_app/google-sheets/index'
 import { Route as AppKalkulatorIndexRouteImport } from './routes/_app/kalkulator/index'
 import { Route as AppKaryawanIndexRouteImport } from './routes/_app/karyawan/index'
 import { Route as AppNonPegawaiIndexRouteImport } from './routes/_app/non-pegawai/index'
@@ -47,6 +48,11 @@ const AppBuktiPotongIndexRoute = AppBuktiPotongIndexRouteImport.update({
 const AppElemenIndexRoute = AppElemenIndexRouteImport.update({
   id: '/elemen/',
   path: '/elemen/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGoogleSheetsIndexRoute = AppGoogleSheetsIndexRouteImport.update({
+  id: '/google-sheets/',
+  path: '/google-sheets/',
   getParentRoute: () => AppRoute,
 } as any)
 const AppKalkulatorIndexRoute = AppKalkulatorIndexRouteImport.update({
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/bukti-potong/': typeof AppBuktiPotongIndexRoute
   '/elemen/': typeof AppElemenIndexRoute
+  '/google-sheets/': typeof AppGoogleSheetsIndexRoute
   '/kalkulator/': typeof AppKalkulatorIndexRoute
   '/karyawan/': typeof AppKaryawanIndexRoute
   '/non-pegawai/': typeof AppNonPegawaiIndexRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/bukti-potong': typeof AppBuktiPotongIndexRoute
   '/elemen': typeof AppElemenIndexRoute
+  '/google-sheets': typeof AppGoogleSheetsIndexRoute
   '/kalkulator': typeof AppKalkulatorIndexRoute
   '/karyawan': typeof AppKaryawanIndexRoute
   '/non-pegawai': typeof AppNonPegawaiIndexRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_app/bukti-potong/': typeof AppBuktiPotongIndexRoute
   '/_app/elemen/': typeof AppElemenIndexRoute
+  '/_app/google-sheets/': typeof AppGoogleSheetsIndexRoute
   '/_app/kalkulator/': typeof AppKalkulatorIndexRoute
   '/_app/karyawan/': typeof AppKaryawanIndexRoute
   '/_app/non-pegawai/': typeof AppNonPegawaiIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/bukti-potong/'
     | '/elemen/'
+    | '/google-sheets/'
     | '/kalkulator/'
     | '/karyawan/'
     | '/non-pegawai/'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/bukti-potong'
     | '/elemen'
+    | '/google-sheets'
     | '/kalkulator'
     | '/karyawan'
     | '/non-pegawai'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/_app/bukti-potong/'
     | '/_app/elemen/'
+    | '/_app/google-sheets/'
     | '/_app/kalkulator/'
     | '/_app/karyawan/'
     | '/_app/non-pegawai/'
@@ -243,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/elemen'
       fullPath: '/elemen/'
       preLoaderRoute: typeof AppElemenIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/google-sheets/': {
+      id: '/_app/google-sheets/'
+      path: '/google-sheets'
+      fullPath: '/google-sheets/'
+      preLoaderRoute: typeof AppGoogleSheetsIndexRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/kalkulator/': {
@@ -322,6 +341,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppBuktiPotongIndexRoute: typeof AppBuktiPotongIndexRoute
   AppElemenIndexRoute: typeof AppElemenIndexRoute
+  AppGoogleSheetsIndexRoute: typeof AppGoogleSheetsIndexRoute
   AppKalkulatorIndexRoute: typeof AppKalkulatorIndexRoute
   AppKaryawanIndexRoute: typeof AppKaryawanIndexRoute
   AppNonPegawaiIndexRoute: typeof AppNonPegawaiIndexRoute
@@ -337,6 +357,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppBuktiPotongIndexRoute: AppBuktiPotongIndexRoute,
   AppElemenIndexRoute: AppElemenIndexRoute,
+  AppGoogleSheetsIndexRoute: AppGoogleSheetsIndexRoute,
   AppKalkulatorIndexRoute: AppKalkulatorIndexRoute,
   AppKaryawanIndexRoute: AppKaryawanIndexRoute,
   AppNonPegawaiIndexRoute: AppNonPegawaiIndexRoute,

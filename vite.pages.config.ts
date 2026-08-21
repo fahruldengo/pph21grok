@@ -15,6 +15,7 @@ export default defineConfig({
     tsconfigPaths: true,
     alias: {
       "@/lib/server/pph": path.resolve(src, "lib/pages/pph-local.ts"),
+      "@/lib/server/sheets": path.resolve(src, "lib/pages/sheets-local.ts"),
       "@/lib/auth/client": path.resolve(src, "lib/pages/auth.ts"),
       "@/lib/auth/provider": path.resolve(src, "lib/pages/auth.ts"),
       "@/lib/auth/use-current-user": path.resolve(src, "lib/pages/auth.ts"),

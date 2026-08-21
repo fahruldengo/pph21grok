@@ -157,6 +157,7 @@ function Dashboard() {
           <ul className="mt-4 space-y-2">
             {[
               { to: "/penghasilan", title: "Isi penghasilan bulan berjalan", sub: "Spreadsheet biru/hijau" },
+              { to: "/google-sheets", title: "Impor dari Google Sheets", sub: "Tab JAN–DES sesuai Excel" },
               { to: "/kalkulator", title: "Uji TER seorang karyawan", sub: "Kalkulator PPh 21" },
               { to: "/tahunan", title: "Hitung Desember / A1", sub: "Pasal 17 minus TER YTD" },
               { to: "/bukti-potong", title: "Siapkan bukti potong", sub: "BPMP, A1, BP21" },

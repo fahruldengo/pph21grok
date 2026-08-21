@@ -4,7 +4,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  type AnyComponent,
 } from "@tanstack/react-router";
 import { createHashHistory } from "@tanstack/history";
 import { useState } from "react";
@@ -23,11 +22,12 @@ import { Route as PemotongFile } from "./routes/_app/pemotong/index";
 import { Route as PenghasilanFile } from "./routes/_app/penghasilan/index";
 import { Route as ReferensiFile } from "./routes/_app/referensi/index";
 import { Route as SpreadsheetFile } from "./routes/_app/spreadsheet/index";
+import { Route as GoogleSheetsFile } from "./routes/_app/google-sheets/index";
 import { Route as SummaryFile } from "./routes/_app/summary/index";
 import { Route as TahunanFile } from "./routes/_app/tahunan/index";
 
-function comp(route: { options: { component?: AnyComponent } }) {
-  return route.options.component as AnyComponent;
+function comp(route: { options: { component?: unknown } }) {
+  return route.options.component as NonNullable<Parameters<typeof createRoute>[0]["component"]>;
 }
 
 function PagesRoot() {
@@ -70,7 +70,7 @@ const appRoute = createRoute({
   component: comp(AppRouteFile),
 });
 
-function page(path: string, route: { options: { component?: AnyComponent } }) {
+function page(path: string, route: { options: { component?: unknown } }) {
   return createRoute({
     getParentRoute: () => appRoute,
     path,
@@ -87,6 +87,7 @@ const routeTree = rootRoute.addChildren([
     page("/karyawan", KaryawanFile),
     page("/penghasilan", PenghasilanFile),
     page("/spreadsheet", SpreadsheetFile),
+    page("/google-sheets", GoogleSheetsFile),
     page("/kalkulator", KalkulatorFile),
     page("/tahunan", TahunanFile),
     page("/summary", SummaryFile),

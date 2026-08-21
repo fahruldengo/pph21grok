@@ -12,6 +12,7 @@ import {
   Menu,
   Receipt,
   Scale,
+  Sheet,
   Table2,
   Users,
   Wallet,
@@ -35,6 +36,7 @@ const NAV = [
       { to: "/karyawan", icon: Users, title: "Karyawan" },
       { to: "/penghasilan", icon: Table2, title: "Penghasilan" },
       { to: "/spreadsheet", icon: FileSpreadsheet, title: "Buku Kerja" },
+      { to: "/google-sheets", icon: Sheet, title: "Google Sheets" },
     ],
   },
   {

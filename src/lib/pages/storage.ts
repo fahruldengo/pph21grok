@@ -43,6 +43,10 @@ export function dbKey(userId: string) {
   return `pajak21.db.${userId}`;
 }
 
+export function sheetLinkKey(userId: string) {
+  return `pajak21.sheets.${userId}`;
+}
+
 export function hashPass(value: string) {
   let h = 2166136261;
   for (let i = 0; i < value.length; i++) {

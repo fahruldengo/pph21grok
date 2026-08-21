@@ -47,6 +47,7 @@ for (const path of [
   "/non-pegawai",
   "/referensi",
   "/spreadsheet",
+  "/google-sheets",
 ]) {
   await page.goto(`http://127.0.0.1:8080${path}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
