@@ -2,6 +2,8 @@
 
 Sistem perhitungan **PPh Pasal 21** (TER, PP 58/2023) yang meniru struktur dan rumus workbook Excel *Perhitungan PPh Pasal 21 Tahun 2026*.
 
+**Aplikasi:** [fahruldengo.github.io/pph21grok](https://fahruldengo.github.io/pph21grok/) — daftar akun lalu pakai spreadsheet, kalkulator, dan bukti potong. Di GitHub Pages data tersimpan di browser (localStorage).
+
 Buku kerja spreadsheet — TER A/B/C, gross-up, BPJS, rekonsiliasi Desember (Pasal 17), bukti potong, dan ringkasan setahun — tersimpan per akun.
 
 ## Menu

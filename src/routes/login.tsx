@@ -33,7 +33,7 @@ function Login() {
         const res = await authClient.signIn.email({ email, password });
         if (res.error) throw new Error(res.error.message);
       }
-      window.location.href = "/";
+      window.location.assign(import.meta.env.BASE_URL || "/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal masuk");
     } finally {
