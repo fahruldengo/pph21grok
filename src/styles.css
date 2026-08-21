@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-sans: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-bg: #f3efe6;
+  --color-surface: #fbf8f2;
+  --color-elevated: #ffffff;
+  --color-fg: #1b1915;
+  --color-muted: #6d675e;
+  --color-subtle: #8a8378;
+  --color-border: #ddd6c8;
+  --color-border-strong: #c9c0b0;
+  --color-accent: #21564b;
+  --color-accent-fg: #f7f3ea;
+  --color-accent-soft: #dce8e3;
+  --color-ink: #16352e;
+  --color-danger: #9b3a2f;
+  --color-warn: #8a5a1f;
+  --color-ok: #2f6b4f;
+  --color-input-blue: #e4eef8;
+  --color-input-green: #e5f3e9;
+  --color-input-amber: #f5ecd8;
+  --color-computed: #f4f1ea;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-soft: 0 1px 2px rgb(27 25 21 / 0.04), 0 8px 24px rgb(27 25 21 / 0.05);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html,
+  body,
+  #app {
+    min-height: 100%;
+    background: var(--color-bg);
+    color: var(--color-fg);
+  }
+  body {
+    font-family: var(--font-sans);
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    font-family: var(--font-display);
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.sheet-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sheet-grid th,
+.sheet-grid td {
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.sheet-grid th {
+  background: #ece6d8;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.cell-input {
+  background: var(--color-input-blue);
+}
+.cell-input-alt {
+  background: var(--color-input-green);
+}
+.cell-computed {
+  background: var(--color-computed);
+  color: var(--color-ink);
+}
