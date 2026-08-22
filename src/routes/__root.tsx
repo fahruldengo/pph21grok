@@ -24,17 +24,13 @@ export const Route = createRootRoute({
         content:
           "Sistem perhitungan PPh Pasal 21 berbasis TER (PP 58/2023) dengan spreadsheet penghasilan, bukti potong, dan ringkasan tahunan.",
       },
-      { name: "theme-color", content: "#21564b" },
+      { name: "theme-color", content: "#7eb6ea" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600;700&display=swap",
-      },
     ],
   }),
   component: RootDocument,
@@ -54,7 +50,7 @@ function RootDocument() {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-bg text-fg">
+      <body className="min-h-screen text-fg">
         <PreviewHostBridge />
         <AuthProvider>
           <QueryClientProvider client={client}>
@@ -63,9 +59,11 @@ function RootDocument() {
               position="top-right"
               toastOptions={{
                 style: {
-                  background: "#fbf8f2",
-                  color: "#1b1915",
-                  border: "1px solid #ddd6c8",
+                  background: "rgba(255,255,255,0.72)",
+                  color: "#1c1c1e",
+                  border: "1px solid rgba(255,255,255,0.65)",
+                  backdropFilter: "blur(24px)",
+                  borderRadius: 18,
                 },
               }}
             />

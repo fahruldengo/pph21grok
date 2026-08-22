@@ -256,7 +256,7 @@ export function PayrollGrid({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[20px] border border-border bg-surface px-4 py-3">
+    <div className="glass rounded-[22px] px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="mt-1 font-display text-2xl tabular-nums text-ink">{value}</p>
     </div>

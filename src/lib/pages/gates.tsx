@@ -25,11 +25,11 @@ export function UserButton() {
   if (!user) return null;
   const label = user.displayName ?? user.primaryEmail ?? "Account";
   return (
-    <div className="flex items-center gap-2">
-      <span className="grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-fg">
+    <div className="flex items-center gap-2 px-1">
+      <span className="grid h-8 w-8 place-items-center rounded-full bg-white/45 text-sm font-medium">
         {label.charAt(0).toUpperCase()}
       </span>
-      <span className="text-sm font-medium">{label}</span>
+      <span className="min-w-0 truncate text-[13px] font-medium">{label}</span>
       {authEnabled && (
         <button
           type="button"
@@ -38,7 +38,7 @@ export function UserButton() {
             setSigningOut(true);
             void signOut().catch(() => setSigningOut(false));
           }}
-          className="cursor-pointer text-sm underline-offset-4 opacity-70 hover:underline disabled:cursor-wait"
+          className="cursor-pointer text-[13px] font-medium text-accent hover:underline disabled:cursor-wait"
         >
           {signingOut ? "Keluar…" : "Keluar"}
         </button>

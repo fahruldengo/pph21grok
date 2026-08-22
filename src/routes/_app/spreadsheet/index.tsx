@@ -34,7 +34,7 @@ function SpreadsheetPage() {
         description="Tampilan spreadsheet mengikuti struktur file Excel: tab bulan di bawah, sel biru/hijau untuk input."
       />
       {ws.data ? (
-        <div className="rounded-[24px] border border-border bg-elevated shadow-soft">
+        <div className="glass-strong overflow-hidden rounded-[28px]">
           <div className="p-4">
             <PayrollGrid
               employees={ws.data.employees}
@@ -44,14 +44,14 @@ function SpreadsheetPage() {
               bulan={bulan}
             />
           </div>
-          <div className="flex gap-1 overflow-x-auto border-t border-border bg-[#ece6d8] px-2 py-1.5">
+          <div className="flex gap-1 overflow-x-auto border-t border-white/40 bg-white/25 px-2 py-1.5">
             {TABS.map((tab) => {
               if ("to" in tab && tab.to) {
                 return (
                   <Link
                     key={tab.id}
                     to={tab.to}
-                    className="shrink-0 rounded-t-[8px] px-3 py-1.5 text-xs font-semibold text-muted hover:bg-surface"
+                    className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold text-muted hover:bg-white/50"
                   >
                     {tab.id}
                   </Link>
@@ -64,8 +64,8 @@ function SpreadsheetPage() {
                   type="button"
                   onClick={() => "bulan" in tab && setBulan(tab.bulan)}
                   className={cn(
-                    "shrink-0 rounded-t-[8px] px-3 py-1.5 text-xs font-semibold",
-                    active ? "bg-surface text-ink shadow-soft" : "text-muted hover:bg-surface/60",
+                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold",
+                    active ? "bg-white/80 text-ink shadow-sm" : "text-muted hover:bg-white/40",
                   )}
                 >
                   {tab.id}

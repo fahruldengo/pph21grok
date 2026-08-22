@@ -8,7 +8,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const fieldClass =
-  "h-10 w-full rounded-[10px] border border-border bg-elevated px-3 text-sm text-fg placeholder:text-subtle outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/20";
+  "h-11 w-full rounded-[14px] border border-white/55 bg-white/45 px-3 text-[15px] text-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] backdrop-blur-xl placeholder:text-subtle outline-none transition-[border-color,box-shadow] duration-150 focus:border-accent/50 focus:ring-2 focus:ring-accent/25";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(fieldClass, className)} {...props} />;
@@ -40,13 +40,7 @@ export function Textarea({
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
-    <label
-      className={cn(
-        "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted",
-        className,
-      )}
-      {...props}
-    />
+    <label className={cn("mb-1.5 block text-[13px] font-medium text-muted", className)} {...props} />
   );
 }
 
@@ -60,7 +54,7 @@ export function Field({
   className?: string;
 }) {
   return (
-    <div className={className}>
+    <div className={cn("relative z-10", className)}>
       <Label>{label}</Label>
       {children}
     </div>

@@ -139,11 +139,11 @@ function KalkulatorPage() {
           </div>
         </Card>
 
-        <Card className="bg-ink text-accent-fg">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">PPh Pasal 21 terutang</p>
-          <p className="mt-3 font-display text-4xl tabular-nums">{formatRp(result.pph)}</p>
-          <p className="mt-2 text-sm text-accent-soft">{terbilang(result.pph)}</p>
-          <dl className="mt-6 grid grid-cols-2 gap-3 text-sm">
+        <Card className="glass-dark border-0 text-white">
+          <p className="relative z-10 text-[13px] font-medium text-white/65">PPh Pasal 21 terutang</p>
+          <p className="relative z-10 mt-3 font-display text-4xl font-semibold tabular-nums tracking-tight">{formatRp(result.pph)}</p>
+          <p className="relative z-10 mt-2 text-sm text-white/70">{terbilang(result.pph)}</p>
+          <dl className="relative z-10 mt-6 grid grid-cols-2 gap-3 text-sm">
             <Row k="Premi JKK" v={formatRp(result.premi.jkk)} />
             <Row k="Premi JKM" v={formatRp(result.premi.jkm)} />
             <Row k="Premi BPJS Kes" v={formatRp(result.premi.kes)} />
@@ -163,7 +163,7 @@ function KalkulatorPage() {
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="rounded-[14px] bg-white/5 px-3 py-2">
-      <dt className="text-[11px] uppercase tracking-wider text-accent-soft">{k}</dt>
+      <dt className="text-[11px] text-white/50">{k}</dt>
       <dd className="tabular-nums">{v}</dd>
     </div>
   );

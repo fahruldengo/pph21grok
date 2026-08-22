@@ -22,7 +22,6 @@ import { Route as PemotongFile } from "./routes/_app/pemotong/index";
 import { Route as PenghasilanFile } from "./routes/_app/penghasilan/index";
 import { Route as ReferensiFile } from "./routes/_app/referensi/index";
 import { Route as SpreadsheetFile } from "./routes/_app/spreadsheet/index";
-import { Route as GoogleSheetsFile } from "./routes/_app/google-sheets/index";
 import { Route as SummaryFile } from "./routes/_app/summary/index";
 import { Route as TahunanFile } from "./routes/_app/tahunan/index";
 
@@ -47,9 +46,11 @@ function PagesRoot() {
           position="top-right"
           toastOptions={{
             style: {
-              background: "#fbf8f2",
-              color: "#1b1915",
-              border: "1px solid #ddd6c8",
+              background: "rgba(255,255,255,0.72)",
+              color: "#1c1c1e",
+              border: "1px solid rgba(255,255,255,0.65)",
+              backdropFilter: "blur(24px)",
+              borderRadius: 18,
             },
           }}
         />
@@ -87,7 +88,6 @@ const routeTree = rootRoute.addChildren([
     page("/karyawan", KaryawanFile),
     page("/penghasilan", PenghasilanFile),
     page("/spreadsheet", SpreadsheetFile),
-    page("/google-sheets", GoogleSheetsFile),
     page("/kalkulator", KalkulatorFile),
     page("/tahunan", TahunanFile),
     page("/summary", SummaryFile),

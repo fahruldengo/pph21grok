@@ -15,7 +15,7 @@ function Dashboard() {
   const pay = useYearPayroll(year);
 
   if (ws.isLoading || !ws.data) {
-    return <div className="h-40 animate-pulse rounded-[24px] bg-surface" />;
+    return <div className="glass h-40 animate-pulse rounded-[28px]" />;
   }
 
   const { company, employees, elements } = ws.data;
@@ -116,7 +116,7 @@ function Dashboard() {
   }
 
   return (
-    <div>
+    <div className="relative z-10">
       <PageHeader
         kicker={company.nama}
         title="Ringkasan pemotongan"
@@ -132,32 +132,36 @@ function Dashboard() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">PPh 21 per bulan</p>
-          <div className="mt-4 h-64">
+          <p className="relative z-10 text-[13px] font-medium text-muted">PPh 21 per bulan</p>
+          <div className="relative z-10 mt-4 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthStats}>
-                <XAxis dataKey="bulan" tick={{ fill: "#6d675e", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="bulan" tick={{ fill: "#636366", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tick={{ fill: "#6d675e", fontSize: 11 }}
+                  tick={{ fill: "#636366", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v) => `${Math.round(Number(v) / 1000)}rb`}
                 />
                 <Tooltip
                   formatter={(v) => formatRp(Number(v))}
-                  contentStyle={{ background: "#fbf8f2", border: "1px solid #ddd6c8", borderRadius: 12 }}
+                  contentStyle={{
+                    background: "rgba(255,255,255,0.78)",
+                    border: "1px solid rgba(255,255,255,0.7)",
+                    borderRadius: 16,
+                    backdropFilter: "blur(16px)",
+                  }}
                 />
-                <Bar dataKey="pph" fill="#21564b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="pph" fill="#007aff" radius={[8, 8, 4, 4]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
         <Card className="lg:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Lanjut kerja</p>
-          <ul className="mt-4 space-y-2">
+          <p className="relative z-10 text-[13px] font-medium text-muted">Lanjut kerja</p>
+          <ul className="relative z-10 mt-4 space-y-2">
             {[
               { to: "/penghasilan", title: "Isi penghasilan bulan berjalan", sub: "Spreadsheet biru/hijau" },
-              { to: "/google-sheets", title: "Impor dari Google Sheets", sub: "Tab JAN–DES sesuai Excel" },
               { to: "/kalkulator", title: "Uji TER seorang karyawan", sub: "Kalkulator PPh 21" },
               { to: "/tahunan", title: "Hitung Desember / A1", sub: "Pasal 17 minus TER YTD" },
               { to: "/bukti-potong", title: "Siapkan bukti potong", sub: "BPMP, A1, BP21" },
@@ -165,7 +169,7 @@ function Dashboard() {
               <li key={x.to}>
                 <Link
                   to={x.to}
-                  className="flex items-center justify-between rounded-[16px] border border-border bg-elevated px-4 py-3 hover:border-accent"
+                  className="flex items-center justify-between rounded-[18px] border border-white/50 bg-white/35 px-4 py-3 transition-colors hover:bg-white/55"
                 >
                   <span>
                     <span className="block text-sm font-semibold">{x.title}</span>
@@ -185,9 +189,11 @@ function Dashboard() {
 function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <Card className="p-4 sm:p-5">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
-      <p className="mt-2 font-display text-2xl tabular-nums text-ink sm:text-3xl">{value}</p>
-      <p className="mt-1 text-xs text-subtle">{hint}</p>
+      <p className="relative z-10 text-[13px] font-medium text-muted">{label}</p>
+      <p className="relative z-10 mt-2 font-display text-[28px] font-semibold tabular-nums tracking-tight text-ink sm:text-[32px]">
+        {value}
+      </p>
+      <p className="relative z-10 mt-1 text-xs text-subtle">{hint}</p>
     </Card>
   );
 }
