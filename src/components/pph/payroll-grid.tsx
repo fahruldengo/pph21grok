@@ -494,7 +494,7 @@ export function PayrollGrid({
 
 function InputLocked({ value }: { value: string }) {
   return (
-    <div className="flex h-11 items-center rounded-[14px] border border-border bg-white px-3 text-[15px] font-medium">
+    <div className="flex h-11 items-center rounded-[14px] border border-white/55 bg-white/35 px-3 text-[15px] font-medium">
       {value}
     </div>
   );
