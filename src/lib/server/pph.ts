@@ -7,7 +7,6 @@ import {
   DEFAULT_ELEMENTS,
   type TaxElements,
 } from "@/lib/pph/calculate";
-import { SEED_EMPLOYEES } from "@/lib/pph/seed-employees";
 import { lastDayOfMonth } from "@/lib/pph/format";
 import type {
   Company,
@@ -68,6 +67,8 @@ function mapEmployee(row: Record<string, unknown>): Employee {
     bulanAkhir: num(row.bulan_akhir) || 12,
     grossUp: Boolean(row.gross_up),
     aktif: Boolean(row.aktif),
+    gaji: num(row.gaji),
+    tunjangan: num(row.tunjangan),
   };
 }
 
@@ -139,84 +140,27 @@ async function actuallySeed(userId: string) {
     insert into tax_elements (user_id) values (${userId})
     on conflict (user_id) do nothing
   `;
-
-  await sql.query(`
-    create unique index if not exists employees_user_nik_uidx
-    on employees (user_id, nik)
-    where nik <> ''
-  `);
-
-  const existing = await sql<{ nik: string }>`
-    select nik from employees where user_id = ${userId}
-  `;
-  const have = new Set(existing.map((r) => r.nik));
-  const missing = SEED_EMPLOYEES.filter((e) => e.nik && !have.has(e.nik));
-  const year = 2026;
-
-  if (missing.length) {
-    const cols =
-      "(user_id, nama, jenis_kelamin, jabatan, nik, npwp, punya_npwp, kode_objek_pajak, ptkp, alamat, karyawan_asing, negara, kode_negara, bulan_mulai, bulan_akhir, gross_up, aktif)";
-    const params: unknown[] = [];
-    const tuples: string[] = [];
-    let i = 1;
-    for (const e of missing) {
-      tuples.push(
-        `($${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++})`,
-      );
-      params.push(
-        userId,
-        e.nama,
-        e.jenisKelamin,
-        e.jabatan,
-        e.nik,
-        e.nik,
-        true,
-        "21-100-01",
-        e.ptkp,
-        e.alamat,
-        false,
-        "Indonesia",
-        "IDN",
-        1,
-        12,
-        true,
-        true,
-      );
-    }
-    await sql.query(
-      `insert into employees ${cols} values ${tuples.join(",")} on conflict (user_id, nik) where nik <> '' do nothing`,
-      params,
-    );
-  }
-
-  const allEmps = await sql<{ id: number; nik: string }>`
-    select id, nik from employees where user_id = ${userId}
-  `;
-  const seedByNik = new Map(SEED_EMPLOYEES.map((e) => [e.nik, e]));
-  const monthsToSeed = [1, 2, 3, 4, 5, 6, 7, 8];
-
-  const params: unknown[] = [];
-  const tuples: string[] = [];
-  let i = 1;
-  for (const row of allEmps) {
-    const seed = seedByNik.get(row.nik);
-    if (!seed) continue;
-    for (const bulan of monthsToSeed) {
-      const tgl = lastDayOfMonth(year, bulan);
-      tuples.push(`($${i++},$${i++},$${i++},$${i++},$${i++},$${i++},$${i++}::date)`);
-      params.push(userId, row.id, year, bulan, seed.gaji, seed.tunjangan, tgl);
-    }
-  }
-  if (tuples.length) {
-    await sql.query(
-      `insert into payroll_lines (
-        user_id, employee_id, tahun, bulan, gaji, tunjangan, tanggal_pemotongan
-      ) values ${tuples.join(",")}
-      on conflict (user_id, employee_id, tahun, bulan) do nothing`,
-      params,
-    );
-  }
 }
+
+const employeeInput = z.object({
+  id: z.number().optional(),
+  nama: z.string().min(1),
+  jenisKelamin: z.string(),
+  jabatan: z.string(),
+  nik: z.string(),
+  npwp: z.string(),
+  punyaNpwp: z.boolean(),
+  kodeObjekPajak: z.string(),
+  ptkp: z.string(),
+  alamat: z.string(),
+  karyawanAsing: z.boolean(),
+  negara: z.string(),
+  bulanMulai: z.number(),
+  bulanAkhir: z.number(),
+  grossUp: z.boolean(),
+  gaji: z.number(),
+  tunjangan: z.number(),
+});
 
 export const getWorkspace = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -327,25 +271,7 @@ export const saveElements = createServerFn({ method: "POST" })
 
 export const saveEmployee = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator(
-    z.object({
-      id: z.number().optional(),
-      nama: z.string().min(1),
-      jenisKelamin: z.string(),
-      jabatan: z.string(),
-      nik: z.string(),
-      npwp: z.string(),
-      punyaNpwp: z.boolean(),
-      kodeObjekPajak: z.string(),
-      ptkp: z.string(),
-      alamat: z.string(),
-      karyawanAsing: z.boolean(),
-      negara: z.string(),
-      bulanMulai: z.number(),
-      bulanAkhir: z.number(),
-      grossUp: z.boolean(),
-    }),
-  )
+  .validator(employeeInput)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const kodeNegara = data.negara.toLowerCase() === "indonesia" ? "IDN" : "IDN";
@@ -366,7 +292,9 @@ export const saveEmployee = createServerFn({ method: "POST" })
           kode_negara = ${kodeNegara},
           bulan_mulai = ${data.bulanMulai},
           bulan_akhir = ${data.bulanAkhir},
-          gross_up = ${data.grossUp}
+          gross_up = ${data.grossUp},
+          gaji = ${data.gaji},
+          tunjangan = ${data.tunjangan}
         where id = ${data.id} and user_id = ${context.userId}
       `;
       return { id: data.id };
@@ -375,12 +303,13 @@ export const saveEmployee = createServerFn({ method: "POST" })
       insert into employees (
         user_id, nama, jenis_kelamin, jabatan, nik, npwp, punya_npwp,
         kode_objek_pajak, ptkp, alamat, karyawan_asing, negara, kode_negara,
-        bulan_mulai, bulan_akhir, gross_up
+        bulan_mulai, bulan_akhir, gross_up, gaji, tunjangan
       ) values (
         ${context.userId}, ${data.nama}, ${data.jenisKelamin}, ${data.jabatan},
         ${data.nik}, ${data.npwp}, ${data.punyaNpwp}, ${data.kodeObjekPajak},
         ${data.ptkp}, ${data.alamat}, ${data.karyawanAsing}, ${data.negara},
-        ${kodeNegara}, ${data.bulanMulai}, ${data.bulanAkhir}, ${data.grossUp}
+        ${kodeNegara}, ${data.bulanMulai}, ${data.bulanAkhir}, ${data.grossUp},
+        ${data.gaji}, ${data.tunjangan}
       ) returning id
     `;
     return { id: rows[0]?.id ?? 0 };
@@ -474,6 +403,27 @@ export const savePayroll = createServerFn({ method: "POST" })
         tantiem = excluded.tantiem,
         zakat = excluded.zakat,
         tanggal_pemotongan = excluded.tanggal_pemotongan
+    `;
+    return { ok: true };
+  });
+
+export const deletePayroll = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    z.object({
+      tahun: z.number(),
+      bulan: z.number(),
+      employeeId: z.number(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    await sql`
+      delete from payroll_lines
+      where user_id = ${context.userId}
+        and tahun = ${data.tahun}
+        and bulan = ${data.bulan}
+        and employee_id = ${data.employeeId}
     `;
     return { ok: true };
   });

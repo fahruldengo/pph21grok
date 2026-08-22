@@ -1,6 +1,5 @@
 import { DEFAULT_ELEMENTS, type TaxElements } from "@/lib/pph/calculate";
 import { lastDayOfMonth } from "@/lib/pph/format";
-import { SEED_EMPLOYEES } from "@/lib/pph/seed-employees";
 import type {
   Company,
   Employee,
@@ -10,7 +9,10 @@ import type {
 } from "@/lib/pph/types";
 import { dbKey, readSession } from "./storage";
 
+const DB_VERSION = 3;
+
 type Db = {
+  version: number;
   company: Company;
   elements: TaxElements;
   employees: Employee[];
@@ -29,6 +31,7 @@ function uid() {
 
 function emptyDb(): Db {
   return {
+    version: DB_VERSION,
     company: {
       id: 1,
       nama: "CV. VIDYA AMALIAH",
@@ -53,68 +56,31 @@ function emptyDb(): Db {
 function load(userId: string): Db {
   try {
     const raw = localStorage.getItem(dbKey(userId));
-    if (!raw) return seed(emptyDb());
+    if (!raw) return emptyDb();
     const db = JSON.parse(raw) as Db;
-    if (!db.employees?.length) return seed(db);
+    if (!db.version || db.version < DB_VERSION) {
+      db.employees = [];
+      db.payroll = [];
+      db.nextEmp = 1;
+      db.nextPay = 1;
+      db.version = DB_VERSION;
+    }
+    db.employees = (db.employees ?? []).map((e) => ({
+      ...e,
+      gaji: e.gaji ?? 0,
+      tunjangan: e.tunjangan ?? 0,
+    }));
+    db.payroll = db.payroll ?? [];
+    db.nonPermanent = db.nonPermanent ?? [];
     return db;
   } catch {
-    return seed(emptyDb());
+    return emptyDb();
   }
 }
 
 function save(userId: string, db: Db) {
+  db.version = DB_VERSION;
   localStorage.setItem(dbKey(userId), JSON.stringify(db));
-}
-
-function seed(db: Db): Db {
-  const year = 2026;
-  const months = [1, 2, 3, 4, 5, 6, 7, 8];
-  const have = new Set(db.employees.map((e) => e.nik));
-  for (const e of SEED_EMPLOYEES) {
-    if (have.has(e.nik)) continue;
-    const id = db.nextEmp++;
-    db.employees.push({
-      id,
-      nama: e.nama,
-      jenisKelamin: e.jenisKelamin,
-      jabatan: e.jabatan,
-      nik: e.nik,
-      npwp: e.nik,
-      punyaNpwp: true,
-      kodeObjekPajak: "21-100-01",
-      ptkp: e.ptkp,
-      alamat: e.alamat,
-      karyawanAsing: false,
-      negara: "Indonesia",
-      kodeNegara: "IDN",
-      bulanMulai: 1,
-      bulanAkhir: 12,
-      grossUp: true,
-      aktif: true,
-    });
-    for (const bulan of months) {
-      db.payroll.push({
-        id: db.nextPay++,
-        employeeId: id,
-        tahun: year,
-        bulan,
-        gaji: e.gaji,
-        tunjangan: e.tunjangan,
-        honorarium: 0,
-        uangMakan: 0,
-        uangLembur: 0,
-        penghasilanLain: 0,
-        natura: 0,
-        bonus: 0,
-        thr: 0,
-        tantiem: 0,
-        zakat: 0,
-        tanggalPemotongan: lastDayOfMonth(year, bulan),
-        fasilitasPajak: "Tanpa Fasilitas",
-      });
-    }
-  }
-  return db;
 }
 
 type DataArg<T> = { data: T } | T;
@@ -172,6 +138,8 @@ export async function saveEmployee(
     bulanMulai: number;
     bulanAkhir: number;
     grossUp: boolean;
+    gaji: number;
+    tunjangan: number;
   }>,
 ) {
   const data = unwrap(input);
@@ -209,6 +177,8 @@ export async function saveEmployee(
     bulanAkhir: data.bulanAkhir,
     grossUp: data.grossUp,
     aktif: true,
+    gaji: data.gaji,
+    tunjangan: data.tunjangan,
   });
   save(userId, db);
   return { id };
@@ -274,6 +244,19 @@ export async function savePayroll(
   };
   if (idx >= 0) db.payroll[idx] = next;
   else db.payroll.push(next);
+  save(userId, db);
+  return { ok: true };
+}
+
+export async function deletePayroll(
+  input: DataArg<{ tahun: number; bulan: number; employeeId: number }>,
+) {
+  const data = unwrap(input);
+  const userId = uid();
+  const db = load(userId);
+  db.payroll = db.payroll.filter(
+    (p) => !(p.employeeId === data.employeeId && p.tahun === data.tahun && p.bulan === data.bulan),
+  );
   save(userId, db);
   return { ok: true };
 }

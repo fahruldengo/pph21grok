@@ -120,7 +120,7 @@ function Dashboard() {
       <PageHeader
         kicker={company.nama}
         title="Ringkasan pemotongan"
-        description={`Tahun pajak ${year}. Data awal mengikuti workbook Excel CV. Vidya Amaliah — 55 karyawan, TER, dan elemen BPJS.`}
+        description={`Tahun pajak ${year}. Mulai dari karyawan kosong: isi master gaji, lalu tambah gaji bulanan lewat popup.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

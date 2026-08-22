@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/app-shell";
 
 export const Route = createFileRoute("/_app")({
@@ -6,9 +6,12 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <AppShell>
-      <Outlet />
+      <div key={pathname} className="page-enter">
+        <Outlet />
+      </div>
     </AppShell>
   );
 }

@@ -30,6 +30,8 @@ export type Employee = {
   bulanAkhir: number;
   grossUp: boolean;
   aktif: boolean;
+  gaji: number;
+  tunjangan: number;
 };
 
 export type PayrollLine = {

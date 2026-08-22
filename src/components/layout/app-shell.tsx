@@ -107,27 +107,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      {open ? (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            aria-label="Tutup menu"
-          />
-          <aside className="glass absolute inset-y-2 left-2 w-[84%] max-w-xs overflow-y-auto rounded-[28px] p-4">
-            <div className="relative z-10 mb-4 flex items-center justify-between">
-              <Brand />
-              <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center">
-                <X className="size-5" />
-              </button>
-            </div>
-            <div className="relative z-10">
-              <Nav onNavigate={() => setOpen(false)} />
-            </div>
-          </aside>
-        </div>
-      ) : null}
+      <div className={`fixed inset-0 z-40 md:hidden ${open ? "drawer-root is-open" : "drawer-root"}`}>
+        <button
+          type="button"
+          className="drawer-backdrop"
+          onClick={() => setOpen(false)}
+          aria-label="Tutup menu"
+          tabIndex={open ? 0 : -1}
+        />
+        <aside className="drawer-panel glass absolute inset-y-2 left-2 w-[84%] max-w-xs overflow-y-auto rounded-[28px] p-4">
+          <div className="relative z-10 mb-4 flex items-center justify-between">
+            <Brand />
+            <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center">
+              <X className="size-5" />
+            </button>
+          </div>
+          <div className="relative z-10">
+            <Nav onNavigate={() => setOpen(false)} />
+          </div>
+        </aside>
+      </div>
 
       <div className="relative z-10 md:flex md:gap-3 md:p-3">
         <aside className="glass sticky top-3 hidden h-[calc(100vh-24px)] w-[248px] shrink-0 flex-col overflow-y-auto rounded-[28px] px-3 py-4 md:flex">
@@ -213,13 +212,15 @@ export function PageHeader({
   return (
     <div className="relative z-10 mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        {kicker ? <p className="text-[13px] font-medium text-accent">{kicker}</p> : null}
-        <h1 className="mt-1 font-display text-[32px] font-semibold tracking-tight text-ink sm:text-[40px]">
+        {kicker ? <p className="page-kicker text-[13px] font-medium text-accent">{kicker}</p> : null}
+        <h1 className="page-title mt-1 font-display text-[32px] font-semibold tracking-tight text-ink sm:text-[40px]">
           {title}
         </h1>
-        {description ? <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">{description}</p> : null}
+        {description ? (
+          <p className="page-desc mt-2 max-w-2xl text-[15px] leading-relaxed text-muted">{description}</p>
+        ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="page-actions flex flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }

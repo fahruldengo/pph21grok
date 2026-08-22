@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Field, Input, Select } from "@/components/ui/input";
+import { Field, Input, MoneyInput, Select } from "@/components/ui/input";
 import { PTKP_STATUSES } from "@/lib/pph/ptkp";
 import { terCategory } from "@/lib/pph/ter";
+import { formatRp } from "@/lib/pph/format";
 import { deleteEmployee, saveEmployee } from "@/lib/server/pph";
 import { useWorkspace } from "@/lib/pph/use-workspace";
 import type { Employee } from "@/lib/pph/types";
@@ -29,6 +30,8 @@ const blank = {
   bulanMulai: 1,
   bulanAkhir: 12,
   grossUp: true,
+  gaji: 0,
+  tunjangan: 0,
 };
 
 function KaryawanPage() {
@@ -62,7 +65,7 @@ function KaryawanPage() {
       <PageHeader
         kicker="Master data"
         title="Karyawan"
-        description="Identitas, PTKP, dan metode penggajian. Penghasilan diisi pada sheet bulanan."
+        description="Identitas, PTKP, gaji pokok, dan tunjangan. Nilai gaji dan tunjangan menjadi dasar saat menambah gaji bulanan."
         actions={
           <Button onClick={() => setEditing({ ...blank })}>Tambah karyawan</Button>
         }
@@ -108,6 +111,15 @@ function KaryawanPage() {
             <Field label="Alamat">
               <Input value={editing.alamat} onChange={(e) => setEditing({ ...editing, alamat: e.target.value })} />
             </Field>
+            <Field label="Gaji pokok" hint="Dasar saat tambah gaji">
+              <MoneyInput value={editing.gaji} onChange={(gaji) => setEditing({ ...editing, gaji })} />
+            </Field>
+            <Field label="Tunjangan" hint="Dasar saat tambah gaji">
+              <MoneyInput
+                value={editing.tunjangan}
+                onChange={(tunjangan) => setEditing({ ...editing, tunjangan })}
+              />
+            </Field>
             <Field label="Bulan mulai">
               <Input
                 type="number"
@@ -152,43 +164,60 @@ function KaryawanPage() {
         </Card>
       ) : null}
 
-      <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-        <table className="sheet-grid w-full min-w-[860px] text-left text-sm">
-          <thead>
-            <tr>
-              <th className="px-3 py-2">Nama</th>
-              <th className="px-3 py-2">Jabatan</th>
-              <th className="px-3 py-2">NIK</th>
-              <th className="px-3 py-2">PTKP</th>
-              <th className="px-3 py-2">TER</th>
-              <th className="px-3 py-2">Gross-up</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((e) => (
-              <tr key={e.id}>
-                <td className="px-3 py-2 font-medium">{e.nama}</td>
-                <td className="px-3 py-2 text-muted">{e.jabatan}</td>
-                <td className="px-3 py-2 tabular-nums">{e.nik}</td>
-                <td className="px-3 py-2">{e.ptkp}</td>
-                <td className="px-3 py-2">{terCategory(e.ptkp)}</td>
-                <td className="px-3 py-2">{e.grossUp ? "Ya" : "Tidak"}</td>
-                <td className="px-3 py-2">
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(toForm(e))}>
-                      Ubah
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: e.id } })}>
-                      Hapus
-                    </Button>
-                  </div>
-                </td>
+      {employees.length === 0 && !editing ? (
+        <div className="glass rounded-[24px] px-6 py-12 text-center">
+          <p className="font-display text-xl font-semibold text-ink">Belum ada karyawan</p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+            Mulai dari awal: tambah karyawan beserta gaji pokok dan tunjangan, lalu isi gaji bulanan
+            dari menu Penghasilan.
+          </p>
+          <Button className="mt-5" onClick={() => setEditing({ ...blank })}>
+            Tambah karyawan
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
+          <table className="sheet-grid w-full min-w-[980px] text-left text-sm">
+            <thead>
+              <tr>
+                <th className="px-3 py-2">Nama</th>
+                <th className="px-3 py-2">Jabatan</th>
+                <th className="px-3 py-2">NIK</th>
+                <th className="px-3 py-2">PTKP</th>
+                <th className="px-3 py-2">Gaji</th>
+                <th className="px-3 py-2">Tunjangan</th>
+                <th className="px-3 py-2">TER</th>
+                <th className="px-3 py-2">Gross-up</th>
+                <th className="px-3 py-2" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {employees.map((e) => (
+                <tr key={e.id}>
+                  <td className="px-3 py-2 font-medium">{e.nama}</td>
+                  <td className="px-3 py-2 text-muted">{e.jabatan}</td>
+                  <td className="px-3 py-2 tabular-nums">{e.nik}</td>
+                  <td className="px-3 py-2">{e.ptkp}</td>
+                  <td className="px-3 py-2 tabular-nums">{formatRp(e.gaji, false)}</td>
+                  <td className="px-3 py-2 tabular-nums">{formatRp(e.tunjangan, false)}</td>
+                  <td className="px-3 py-2">{terCategory(e.ptkp)}</td>
+                  <td className="px-3 py-2">{e.grossUp ? "Ya" : "Tidak"}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(toForm(e))}>
+                        Ubah
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: e.id } })}>
+                        Hapus
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -210,5 +239,7 @@ function toForm(e: Employee) {
     bulanMulai: e.bulanMulai,
     bulanAkhir: e.bulanAkhir,
     grossUp: e.grossUp,
+    gaji: e.gaji,
+    tunjangan: e.tunjangan,
   };
 }

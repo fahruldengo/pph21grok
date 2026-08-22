@@ -1,58 +1,33 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/input";
+import { Field, MoneyInput, Select } from "@/components/ui/input";
+import { GlassModal } from "@/components/ui/modal";
 import { calculateMonthly, type TaxElements } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS } from "@/lib/pph/format";
-import { copyMonth, savePayroll } from "@/lib/server/pph";
+import { copyMonth, deletePayroll, savePayroll } from "@/lib/server/pph";
 import type { Employee, PayrollLine } from "@/lib/pph/types";
 import { cn } from "@/lib/utils";
 
-type Draft = {
+type FormState = {
+  employeeId: number | "";
   gaji: number;
   tunjangan: number;
-  honorarium: number;
-  uangMakan: number;
   uangLembur: number;
-  penghasilanLain: number;
-  natura: number;
+  honorarium: number;
   bonus: number;
-  thr: number;
-  tantiem: number;
-  zakat: number;
 };
 
-const EMPTY: Draft = {
+const EMPTY_FORM: FormState = {
+  employeeId: "",
   gaji: 0,
   tunjangan: 0,
-  honorarium: 0,
-  uangMakan: 0,
   uangLembur: 0,
-  penghasilanLain: 0,
-  natura: 0,
+  honorarium: 0,
   bonus: 0,
-  thr: 0,
-  tantiem: 0,
-  zakat: 0,
 };
-
-function toDraft(line?: PayrollLine): Draft {
-  if (!line) return { ...EMPTY };
-  return {
-    gaji: line.gaji,
-    tunjangan: line.tunjangan,
-    honorarium: line.honorarium,
-    uangMakan: line.uangMakan,
-    uangLembur: line.uangLembur,
-    penghasilanLain: line.penghasilanLain,
-    natura: line.natura,
-    bonus: line.bonus,
-    thr: line.thr,
-    tantiem: line.tantiem,
-    zakat: line.zakat,
-  };
-}
 
 export function PayrollGrid({
   employees,
@@ -70,14 +45,10 @@ export function PayrollGrid({
   onMonthChange?: (bulan: number) => void;
 }) {
   const qc = useQueryClient();
-  const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [copyFrom, setCopyFrom] = useState(1);
-  const saveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
-
-  useEffect(() => {
-    setDrafts({});
-  }, [bulan, tahun]);
-
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const byEmp = useMemo(() => {
     const m = new Map<number, PayrollLine>();
@@ -90,8 +61,19 @@ export function PayrollGrid({
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["payroll"] });
       await qc.invalidateQueries({ queryKey: ["payroll-year"] });
+      setOpen(false);
+      toast.success("Gaji tersimpan");
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: deletePayroll,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["payroll"] });
+      await qc.invalidateQueries({ queryKey: ["payroll-year"] });
+      toast.success("Gaji dihapus");
+    },
   });
 
   const copy = useMutation({
@@ -102,35 +84,148 @@ export function PayrollGrid({
     },
   });
 
-  const rows = employees.map((emp) => {
-    const d = drafts[emp.id] ?? toDraft(byEmp.get(emp.id));
-    const calc = calculateMonthly(
-      {
-        ...d,
-        ptkp: emp.ptkp,
-        grossUp: emp.grossUp,
-        punyaNpwp: emp.punyaNpwp,
-      },
-      elements,
-    );
-    return { emp, d, calc };
-  });
+  const rows = employees
+    .filter((emp) => byEmp.has(emp.id))
+    .map((emp) => {
+      const line = byEmp.get(emp.id)!;
+      const calc = calculateMonthly(
+        {
+          gaji: line.gaji,
+          tunjangan: line.tunjangan,
+          honorarium: line.honorarium,
+          uangMakan: line.uangMakan,
+          uangLembur: line.uangLembur,
+          penghasilanLain: line.penghasilanLain,
+          natura: line.natura,
+          bonus: line.bonus,
+          thr: line.thr,
+          tantiem: line.tantiem,
+          zakat: line.zakat,
+          ptkp: emp.ptkp,
+          grossUp: emp.grossUp,
+          punyaNpwp: emp.punyaNpwp,
+        },
+        elements,
+      );
+      return { emp, line, calc, tunjanganRecap: line.tunjangan + line.uangLembur };
+    });
 
   const totalPph = rows.reduce((s, r) => s + r.calc.pph, 0);
   const totalBruto = rows.reduce((s, r) => s + r.calc.bruto, 0);
 
-  function patch(id: number, key: keyof Draft, value: number) {
-    const base = drafts[id] ?? toDraft(byEmp.get(id));
-    const next = { ...base, [key]: value };
-    setDrafts((prev) => ({ ...prev, [id]: next }));
-    window.clearTimeout(saveTimers.current[id]);
-    saveTimers.current[id] = setTimeout(() => {
-      save.mutate({
-        data: { tahun, bulan, line: { employeeId: id, ...next } },
-      });
-    }, 500);
+  const taken = new Set(rows.map((r) => r.emp.id));
+  const available = employees.filter((e) => editingId === e.id || !taken.has(e.id));
+
+  const selected = employees.find((e) => e.id === form.employeeId);
+  const existing = typeof form.employeeId === "number" ? byEmp.get(form.employeeId) : undefined;
+  const preview =
+    selected &&
+    calculateMonthly(
+      {
+        gaji: form.gaji,
+        tunjangan: form.tunjangan,
+        honorarium: form.honorarium,
+        uangMakan: existing?.uangMakan ?? 0,
+        uangLembur: form.uangLembur,
+        penghasilanLain: existing?.penghasilanLain ?? 0,
+        natura: existing?.natura ?? 0,
+        bonus: form.bonus,
+        thr: existing?.thr ?? 0,
+        tantiem: existing?.tantiem ?? 0,
+        zakat: existing?.zakat ?? 0,
+        ptkp: selected.ptkp,
+        grossUp: selected.grossUp,
+        punyaNpwp: selected.punyaNpwp,
+      },
+      elements,
+    );
+
+  function openAdd() {
+    if (!employees.length) {
+      toast.error("Tambah karyawan dulu di menu Karyawan");
+      return;
+    }
+    if (!available.length) {
+      toast.error("Semua karyawan sudah punya gaji bulan ini");
+      return;
+    }
+    const first = available[0];
+    setEditingId(null);
+    setForm({
+      employeeId: first.id,
+      gaji: first.gaji,
+      tunjangan: first.tunjangan,
+      uangLembur: 0,
+      honorarium: 0,
+      bonus: 0,
+    });
+    setOpen(true);
   }
 
+  function openEdit(emp: Employee, line: PayrollLine) {
+    setEditingId(emp.id);
+    setForm({
+      employeeId: emp.id,
+      gaji: line.gaji,
+      tunjangan: line.tunjangan,
+      uangLembur: line.uangLembur,
+      honorarium: line.honorarium,
+      bonus: line.bonus + line.thr,
+    });
+    setOpen(true);
+  }
+
+  function pickEmployee(id: number) {
+    const emp = employees.find((e) => e.id === id);
+    const line = byEmp.get(id);
+    if (line) {
+      setForm({
+        employeeId: id,
+        gaji: line.gaji,
+        tunjangan: line.tunjangan,
+        uangLembur: line.uangLembur,
+        honorarium: line.honorarium,
+        bonus: line.bonus + line.thr,
+      });
+      return;
+    }
+    setForm({
+      employeeId: id,
+      gaji: emp?.gaji ?? 0,
+      tunjangan: emp?.tunjangan ?? 0,
+      uangLembur: 0,
+      honorarium: 0,
+      bonus: 0,
+    });
+  }
+
+  function submit() {
+    if (form.employeeId === "") {
+      toast.error("Pilih karyawan");
+      return;
+    }
+    const line = byEmp.get(form.employeeId);
+    save.mutate({
+      data: {
+        tahun,
+        bulan,
+        line: {
+          employeeId: form.employeeId,
+          gaji: form.gaji,
+          tunjangan: form.tunjangan,
+          honorarium: form.honorarium,
+          uangMakan: line?.uangMakan ?? 0,
+          uangLembur: form.uangLembur,
+          penghasilanLain: line?.penghasilanLain ?? 0,
+          natura: line?.natura ?? 0,
+          bonus: form.bonus,
+          thr: 0,
+          tantiem: line?.tantiem ?? 0,
+          zakat: line?.zakat ?? 0,
+        },
+      },
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -142,7 +237,7 @@ export function PayrollGrid({
                 type="button"
                 onClick={() => onMonthChange(m.id)}
                 className={cn(
-                  "h-9 rounded-full px-3 text-sm font-semibold",
+                  "h-9 rounded-full px-3 text-sm font-semibold transition-[background-color,transform] duration-150",
                   m.id === bulan ? "bg-accent text-accent-fg" : "bg-computed text-muted hover:bg-accent-soft",
                 )}
               >
@@ -151,6 +246,10 @@ export function PayrollGrid({
             ))
           : null}
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button onClick={openAdd}>
+            <Plus className="size-4" />
+            Tambah gaji
+          </Button>
           <Select value={String(copyFrom)} onChange={(e) => setCopyFrom(Number(e.target.value))}>
             {MONTHS.map((m) => (
               <option key={m.id} value={m.id}>
@@ -161,9 +260,7 @@ export function PayrollGrid({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() =>
-              copy.mutate({ data: { tahun, fromBulan: copyFrom, toBulan: bulan } })
-            }
+            onClick={() => copy.mutate({ data: { tahun, fromBulan: copyFrom, toBulan: bulan } })}
           >
             Salin gaji pokok
           </Button>
@@ -171,85 +268,191 @@ export function PayrollGrid({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Karyawan" value={String(rows.length)} />
+        <Stat label="Karyawan bergaji" value={String(rows.length)} />
         <Stat label="Bruto bulan ini" value={formatRp(totalBruto)} />
         <Stat label="PPh 21 terutang" value={formatRp(totalPph)} />
       </div>
 
-      <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-        <table className="sheet-grid min-w-[1280px] w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
-              <th className="px-3 py-2">PTKP</th>
-              <th className="px-3 py-2">Gross up</th>
-              <th className="px-3 py-2 cell-input">Gaji</th>
-              <th className="px-3 py-2 cell-input-alt">Tunjangan</th>
-              <th className="px-3 py-2 cell-input">Honor</th>
-              <th className="px-3 py-2 cell-input-alt">Bonus / THR</th>
-              <th className="px-3 py-2">Premi</th>
-              <th className="px-3 py-2">Tunj. PPh</th>
-              <th className="px-3 py-2">Bruto</th>
-              <th className="px-3 py-2">TER</th>
-              <th className="px-3 py-2">PPh 21</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ emp, d, calc }) => (
-              <tr key={`${emp.id}-${bulan}`} className="hover:bg-accent-soft/40">
-                <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
-                  <div>{emp.nama}</div>
-                  <div className="text-[11px] text-muted">{emp.jabatan}</div>
-                </td>
-                <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
-                <td className="px-3 py-1.5">{emp.grossUp ? "Ya" : "Tidak"}</td>
-                <MoneyCell value={d.gaji} onChange={(v) => patch(emp.id, "gaji", v)} tone="blue" />
-                <MoneyCell value={d.tunjangan} onChange={(v) => patch(emp.id, "tunjangan", v)} tone="green" />
-                <MoneyCell value={d.honorarium} onChange={(v) => patch(emp.id, "honorarium", v)} tone="blue" />
-                <MoneyCell
-                  value={d.bonus + d.thr}
-                  onChange={(v) => patch(emp.id, "bonus", v)}
-                  tone="green"
-                />
-                <td className="cell-computed px-3 py-1.5 tabular-nums">{formatRp(calc.premi.totalAddBruto, false)}</td>
-                <td className="cell-computed px-3 py-1.5 tabular-nums">{formatRp(calc.tunjanganPph, false)}</td>
-                <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">{formatRp(calc.bruto, false)}</td>
-                <td className="px-3 py-1.5 text-xs">
-                  {calc.kategoriTer}
-                  <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
-                </td>
-                <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">{formatRp(calc.pph, false)}</td>
-                <td className="px-2 py-1.5">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      save.mutate(
-                        {
-                          data: {
-                            tahun,
-                            bulan,
-                            line: { employeeId: emp.id, ...d },
-                          },
-                        },
-                        { onSuccess: () => toast.success("Baris tersimpan") },
-                      )
-                    }
-
-                  >
-                    Simpan
-                  </Button>
-                </td>
+      {rows.length === 0 ? (
+        <div className="glass rounded-[24px] px-6 py-12 text-center">
+          <p className="font-display text-xl font-semibold text-ink">Belum ada gaji bulan ini</p>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
+            Isi gaji dari data karyawan. Tunjangan dan lembur diinput di popup; di rekapan, lembur
+            digabung ke kolom tunjangan.
+          </p>
+          <Button className="mt-5" onClick={openAdd}>
+            <Plus className="size-4" />
+            Tambah gaji
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
+          <table className="sheet-grid min-w-[1180px] w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
+                <th className="px-3 py-2">PTKP</th>
+                <th className="px-3 py-2">Gaji</th>
+                <th className="px-3 py-2">Tunjangan</th>
+                <th className="px-3 py-2">Honor</th>
+                <th className="px-3 py-2">Bonus / THR</th>
+                <th className="px-3 py-2">Premi</th>
+                <th className="px-3 py-2">Tunj. PPh</th>
+                <th className="px-3 py-2">Bruto</th>
+                <th className="px-3 py-2">TER</th>
+                <th className="px-3 py-2">PPh 21</th>
+                <th className="px-3 py-2" />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(({ emp, line, calc, tunjanganRecap }) => (
+                <tr key={`${emp.id}-${bulan}`} className="hover:bg-accent-soft/40">
+                  <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
+                    <div>{emp.nama}</div>
+                    <div className="text-[11px] text-muted">{emp.jabatan}</div>
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji, false)}</td>
+                  <td className="px-3 py-1.5 tabular-nums">
+                    {formatRp(tunjanganRecap, false)}
+                    {line.uangLembur ? (
+                      <div className="text-[11px] text-muted">
+                        termasuk lembur {formatRp(line.uangLembur, false)}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.honorarium, false)}</td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.bonus + line.thr, false)}</td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums">
+                    {formatRp(calc.premi.totalAddBruto, false)}
+                  </td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums">
+                    {formatRp(calc.tunjanganPph, false)}
+                  </td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">
+                    {formatRp(calc.bruto, false)}
+                  </td>
+                  <td className="px-3 py-1.5 text-xs">
+                    {calc.kategoriTer}
+                    <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">
+                    {formatRp(calc.pph, false)}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(emp, line)}>
+                        <Pencil className="size-3.5" />
+                        Ubah
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          remove.mutate({ data: { tahun, bulan, employeeId: emp.id } })
+                        }
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       <p className="text-xs text-muted">
-        Kolom biru dan hijau adalah input, sesuai workbook Excel. Nilai lain dihitung otomatis dengan TER
-        (PP 58/2023). Gross-up menyelesaikan tunjangan PPh secara iteratif.
+        Kolom tunjangan di rekapan = tunjangan + lembur. Perhitungan TER tetap memisahkan keduanya
+        sebagai penghasilan teratur, sama seperti workbook Excel.
       </p>
+
+      <GlassModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={editingId ? "Ubah gaji" : "Tambah gaji"}
+        description={`Masa ${MONTHS.find((m) => m.id === bulan)?.label} ${tahun}. Gaji dan tunjangan terisi dari data karyawan.`}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Karyawan" className="sm:col-span-2">
+            {editingId ? (
+              <InputLocked value={selected?.nama ?? ""} />
+            ) : (
+              <Select
+                value={form.employeeId === "" ? "" : String(form.employeeId)}
+                onChange={(e) => pickEmployee(Number(e.target.value))}
+              >
+                {available.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nama}
+                    {e.jabatan ? ` — ${e.jabatan}` : ""}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label="Gaji" hint="Dasar dari master karyawan">
+            <MoneyInput value={form.gaji} onChange={(gaji) => setForm({ ...form, gaji })} />
+          </Field>
+          <Field label="Tunjangan" hint="Dasar dari master karyawan">
+            <MoneyInput
+              value={form.tunjangan}
+              onChange={(tunjangan) => setForm({ ...form, tunjangan })}
+            />
+          </Field>
+          <Field label="Lembur" hint="Di rekapan digabung ke tunjangan">
+            <MoneyInput
+              value={form.uangLembur}
+              onChange={(uangLembur) => setForm({ ...form, uangLembur })}
+            />
+          </Field>
+          <Field label="Honor">
+            <MoneyInput
+              value={form.honorarium}
+              onChange={(honorarium) => setForm({ ...form, honorarium })}
+            />
+          </Field>
+          <Field label="Bonus / THR" className="sm:col-span-2">
+            <MoneyInput value={form.bonus} onChange={(bonus) => setForm({ ...form, bonus })} />
+          </Field>
+        </div>
+
+        {preview ? (
+          <div className="glass-dark mt-4 grid grid-cols-3 gap-3 rounded-[20px] px-4 py-3 text-sm">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/55">
+                Tunjangan rekapan
+              </p>
+              <p className="mt-1 tabular-nums">{formatRp(form.tunjangan + form.uangLembur)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/55">Bruto</p>
+              <p className="mt-1 tabular-nums">{formatRp(preview.bruto)}</p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/55">PPh 21</p>
+              <p className="mt-1 tabular-nums">{formatRp(preview.pph)}</p>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Batal
+          </Button>
+          <Button onClick={submit} disabled={save.isPending}>
+            Simpan gaji
+          </Button>
+        </div>
+      </GlassModal>
+    </div>
+  );
+}
+
+function InputLocked({ value }: { value: string }) {
+  return (
+    <div className="flex h-11 items-center rounded-[14px] border border-white/55 bg-white/35 px-3 text-[15px] font-medium">
+      {value}
     </div>
   );
 }
@@ -260,25 +463,5 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="mt-1 font-display text-2xl tabular-nums text-ink">{value}</p>
     </div>
-  );
-}
-
-function MoneyCell({
-  value,
-  onChange,
-  tone,
-}: {
-  value: number;
-  onChange: (n: number) => void;
-  tone: "blue" | "green";
-}) {
-  return (
-    <td className={tone === "blue" ? "cell-input p-0" : "cell-input-alt p-0"}>
-      <input
-        className="h-10 w-32 bg-transparent px-2 text-right tabular-nums outline-none"
-        value={value ? String(Math.round(value)) : ""}
-        onChange={(e) => onChange(Number(String(e.target.value).replace(/[^\d.-]/g, "")) || 0)}
-      />
-    </td>
   );
 }

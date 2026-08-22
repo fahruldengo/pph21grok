@@ -48,15 +48,43 @@ export function Field({
   label,
   children,
   className,
+  hint,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
+  hint?: string;
 }) {
   return (
     <div className={cn("relative z-10", className)}>
       <Label>{label}</Label>
       {children}
+      {hint ? <p className="mt-1 text-xs text-subtle">{hint}</p> : null}
+    </div>
+  );
+}
+
+export function MoneyInput({
+  value,
+  onChange,
+  className,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & {
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted">
+        Rp
+      </span>
+      <Input
+        inputMode="numeric"
+        className={cn("pl-10 tabular-nums", className)}
+        value={value ? String(Math.round(value)) : ""}
+        onChange={(e) => onChange(Number(String(e.target.value).replace(/[^\d]/g, "")) || 0)}
+        {...props}
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ function PenghasilanPage() {
       <PageHeader
         kicker={`Sheet ${monthLabel(bulan).toUpperCase()}`}
         title="Input penghasilan"
-        description="Hanya kolom berwarna yang diinput. Premi BPJS, TER, dan PPh 21 dihitung otomatis seperti rumus Excel."
+        description="Tambah gaji lewat popup. Lembur diinput terpisah, tetapi di rekapan masuk kolom tunjangan. Premi BPJS, TER, dan PPh 21 dihitung otomatis."
       />
       {ws.data ? (
         <PayrollGrid

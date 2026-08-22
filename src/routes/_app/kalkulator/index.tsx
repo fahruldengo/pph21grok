@@ -14,12 +14,12 @@ function KalkulatorPage() {
   const ws = useWorkspace();
   const tahun = ws.data?.company.tahunPajak ?? 2026;
   const pay = usePayroll(tahun, 1);
-  const [nama, setNama] = useState("DUMMY");
-  const [ptkp, setPtkp] = useState("K/3");
+  const [nama, setNama] = useState("");
+  const [ptkp, setPtkp] = useState("TK/0");
   const [grossUp, setGrossUp] = useState("Yes");
   const [npwp, setNpwp] = useState("YA");
-  const [gaji, setGaji] = useState(7_120_576);
-  const [tunjangan, setTunjangan] = useState(6_500_000);
+  const [gaji, setGaji] = useState(0);
+  const [tunjangan, setTunjangan] = useState(0);
   const [honor, setHonor] = useState(0);
   const [bonus, setBonus] = useState(0);
   const [thr, setThr] = useState(0);
@@ -65,6 +65,12 @@ function KalkulatorPage() {
       setHonor(line.honorarium);
       setBonus(line.bonus);
       setThr(line.thr);
+    } else {
+      setGaji(emp.gaji);
+      setTunjangan(emp.tunjangan);
+      setHonor(0);
+      setBonus(0);
+      setThr(0);
     }
   }
 

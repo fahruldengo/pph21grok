@@ -31,7 +31,7 @@ function SpreadsheetPage() {
       <PageHeader
         kicker="Workbook"
         title="Buku kerja PPh 21"
-        description="Tampilan spreadsheet mengikuti struktur file Excel: tab bulan di bawah, sel biru/hijau untuk input."
+        description="Tampilan spreadsheet mengikuti struktur file Excel. Gaji diisi lewat popup; lembur tergabung ke kolom tunjangan di rekapan."
       />
       {ws.data ? (
         <div className="glass-strong overflow-hidden rounded-[28px]">
