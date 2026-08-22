@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { calculateMonthly } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS, terbilang } from "@/lib/pph/format";
+import { gajiDibayar } from "@/lib/pph/types";
 import { PTKP_STATUSES } from "@/lib/pph/ptkp";
 import { useTaxYear } from "@/lib/pph/tax-year";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
@@ -64,7 +65,7 @@ function KalkulatorPage() {
       pay.data?.find((l) => l.employeeId === emp.id && l.bulan === 1) ??
       pay.data?.find((l) => l.employeeId === emp.id);
     if (line) {
-      setGaji(line.gaji);
+      setGaji(gajiDibayar(line.gaji, line.penguranganGaji));
       setTunjangan(line.tunjangan);
       setHonor(line.honorarium);
       setBonus(line.bonus);

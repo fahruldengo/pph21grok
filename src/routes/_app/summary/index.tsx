@@ -6,6 +6,7 @@ import { YearSelect } from "@/components/pph/year-select";
 import { Badge } from "@/components/ui/card";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
 import { formatRp, MONTHS } from "@/lib/pph/format";
+import { gajiDibayar } from "@/lib/pph/types";
 import { useTaxYear } from "@/lib/pph/tax-year";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 
@@ -25,7 +26,7 @@ function SummaryPage() {
       if (!line) return { bruto: 0, pph: 0 };
       const r = calculateMonthly(
         {
-          gaji: line.gaji,
+          gaji: gajiDibayar(line.gaji, line.penguranganGaji),
           tunjangan: line.tunjangan,
           honorarium: line.honorarium,
           uangMakan: line.uangMakan,
@@ -48,7 +49,7 @@ function SummaryPage() {
       .map((x) =>
         x.line
           ? {
-              gaji: x.line.gaji,
+              gaji: gajiDibayar(x.line.gaji, x.line.penguranganGaji),
               tunjangan: x.line.tunjangan,
               honorarium: x.line.honorarium,
               uangMakan: x.line.uangMakan,
@@ -62,7 +63,7 @@ function SummaryPage() {
               pphDipotong: x.pph,
               iuranPensiun: calculateMonthly(
                 {
-                  gaji: x.line.gaji,
+                  gaji: gajiDibayar(x.line.gaji, x.line.penguranganGaji),
                   tunjangan: x.line.tunjangan,
                   honorarium: x.line.honorarium,
                   uangMakan: x.line.uangMakan,

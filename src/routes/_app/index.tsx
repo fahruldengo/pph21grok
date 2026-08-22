@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
 import { formatRp, MONTHS } from "@/lib/pph/format";
+import { gajiDibayar } from "@/lib/pph/types";
 import { useTaxYear } from "@/lib/pph/tax-year";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowUpRight } from "lucide-react";
@@ -33,7 +34,7 @@ function Dashboard() {
       n += 1;
       const r = calculateMonthly(
         {
-          gaji: line.gaji,
+          gaji: gajiDibayar(line.gaji, line.penguranganGaji),
           tunjangan: line.tunjangan,
           honorarium: line.honorarium,
           uangMakan: line.uangMakan,
@@ -69,7 +70,7 @@ function Dashboard() {
       .map((l) => {
         const r = calculateMonthly(
           {
-            gaji: l.gaji,
+            gaji: gajiDibayar(l.gaji, l.penguranganGaji),
             tunjangan: l.tunjangan,
             honorarium: l.honorarium,
             uangMakan: l.uangMakan,
@@ -87,7 +88,7 @@ function Dashboard() {
           elements,
         );
         return {
-          gaji: l.gaji,
+          gaji: gajiDibayar(l.gaji, l.penguranganGaji),
           tunjangan: l.tunjangan,
           honorarium: l.honorarium,
           uangMakan: l.uangMakan,

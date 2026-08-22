@@ -52,6 +52,7 @@ export type PayrollLine = {
   zakat: number;
   tanggalPemotongan: string | null;
   fasilitasPajak: string;
+  penguranganGaji: number;
 };
 
 export type NonPermanentRow = {
@@ -89,4 +90,9 @@ export type PayrollSave = {
   thr: number;
   tantiem: number;
   zakat: number;
+  penguranganGaji: number;
 };
+
+export function gajiDibayar(gaji: number, penguranganGaji = 0) {
+  return Math.max(0, gaji - Math.max(0, penguranganGaji));
+}

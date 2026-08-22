@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { calculateMonthly } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS, terbilang } from "@/lib/pph/format";
+import { gajiDibayar } from "@/lib/pph/types";
 import { useTaxYear } from "@/lib/pph/tax-year";
 import { usePayroll, useWorkspace } from "@/lib/pph/use-workspace";
 
@@ -27,7 +28,7 @@ function BuktiPage() {
     if (!emp || !ws.data) return null;
     return calculateMonthly(
       {
-        gaji: line?.gaji ?? 0,
+        gaji: gajiDibayar(line?.gaji ?? 0, line?.penguranganGaji ?? 0),
         tunjangan: line?.tunjangan ?? 0,
         honorarium: line?.honorarium ?? 0,
         uangMakan: line?.uangMakan ?? 0,

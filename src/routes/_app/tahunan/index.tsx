@@ -6,6 +6,7 @@ import { YearSelect } from "@/components/pph/year-select";
 import { Badge } from "@/components/ui/card";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
 import { formatRp } from "@/lib/pph/format";
+import { gajiDibayar } from "@/lib/pph/types";
 import { useTaxYear } from "@/lib/pph/tax-year";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 
@@ -25,7 +26,7 @@ function TahunanPage() {
       .map((l) => {
         const r = calculateMonthly(
           {
-            gaji: l.gaji,
+            gaji: gajiDibayar(l.gaji, l.penguranganGaji),
             tunjangan: l.tunjangan,
             honorarium: l.honorarium,
             uangMakan: l.uangMakan,
@@ -44,7 +45,7 @@ function TahunanPage() {
         );
         return {
           bulan: l.bulan,
-          gaji: l.gaji,
+          gaji: gajiDibayar(l.gaji, l.penguranganGaji),
           tunjangan: l.tunjangan,
           honorarium: l.honorarium,
           uangMakan: l.uangMakan,

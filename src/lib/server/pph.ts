@@ -93,6 +93,7 @@ function mapPayroll(row: Record<string, unknown>): PayrollLine {
       ? String(row.tanggal_pemotongan).slice(0, 10)
       : null,
     fasilitasPajak: String(row.fasilitas_pajak ?? "Tanpa Fasilitas"),
+    penguranganGaji: num(row.pengurangan_gaji),
   };
 }
 
@@ -373,6 +374,7 @@ export const savePayroll = createServerFn({ method: "POST" })
         thr: z.number(),
         tantiem: z.number(),
         zakat: z.number(),
+        penguranganGaji: z.number().optional(),
       }),
     }),
   )
@@ -406,14 +408,17 @@ export const savePayroll = createServerFn({ method: "POST" })
     }
     const tgl = lastDayOfMonth(data.tahun, data.bulan);
     const l = data.line as PayrollSave;
+    const pengurangan = Math.max(0, l.penguranganGaji ?? 0);
     await sql`
       insert into payroll_lines (
         user_id, employee_id, tahun, bulan, gaji, tunjangan, honorarium,
-        uang_makan, uang_lembur, penghasilan_lain, natura, bonus, thr, tantiem, zakat, tanggal_pemotongan
+        uang_makan, uang_lembur, penghasilan_lain, natura, bonus, thr, tantiem, zakat,
+        pengurangan_gaji, tanggal_pemotongan
       ) values (
         ${context.userId}, ${l.employeeId}, ${data.tahun}, ${data.bulan},
         ${l.gaji}, ${l.tunjangan}, ${l.honorarium}, ${l.uangMakan}, ${l.uangLembur},
-        ${l.penghasilanLain}, ${l.natura}, ${l.bonus}, ${l.thr}, ${l.tantiem}, ${l.zakat}, ${tgl}::date
+        ${l.penghasilanLain}, ${l.natura}, ${l.bonus}, ${l.thr}, ${l.tantiem}, ${l.zakat},
+        ${pengurangan}, ${tgl}::date
       )
       on conflict (user_id, employee_id, tahun, bulan) do update set
         gaji = excluded.gaji,
@@ -427,6 +432,7 @@ export const savePayroll = createServerFn({ method: "POST" })
         thr = excluded.thr,
         tantiem = excluded.tantiem,
         zakat = excluded.zakat,
+        pengurangan_gaji = excluded.pengurangan_gaji,
         tanggal_pemotongan = excluded.tanggal_pemotongan
     `;
     return { ok: true };
@@ -492,12 +498,14 @@ export const copyMonth = createServerFn({ method: "POST" })
       await sql`
         insert into payroll_lines (
           user_id, employee_id, tahun, bulan, gaji, tunjangan, honorarium,
-          uang_makan, uang_lembur, penghasilan_lain, natura, bonus, thr, tantiem, zakat, tanggal_pemotongan
+          uang_makan, uang_lembur, penghasilan_lain, natura, bonus, thr, tantiem, zakat,
+          pengurangan_gaji, tanggal_pemotongan
         ) values (
           ${context.userId}, ${empId}, ${data.tahun}, ${data.toBulan},
           ${num(row.gaji)}, ${num(row.tunjangan)}, ${num(row.honorarium)},
           ${num(row.uang_makan)}, ${num(row.uang_lembur)}, ${num(row.penghasilan_lain)},
-          ${num(row.natura)}, ${0}, ${0}, ${0}, ${num(row.zakat)}, ${tgl}::date
+          ${num(row.natura)}, ${0}, ${0}, ${0}, ${num(row.zakat)},
+          ${0}, ${tgl}::date
         )
         on conflict (user_id, employee_id, tahun, bulan) do update set
           gaji = excluded.gaji,
@@ -506,7 +514,8 @@ export const copyMonth = createServerFn({ method: "POST" })
           uang_makan = excluded.uang_makan,
           uang_lembur = excluded.uang_lembur,
           penghasilan_lain = excluded.penghasilan_lain,
-          natura = excluded.natura
+          natura = excluded.natura,
+          pengurangan_gaji = 0
       `;
     }
     return { copied };

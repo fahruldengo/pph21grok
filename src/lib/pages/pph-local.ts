@@ -72,7 +72,10 @@ function load(userId: string): Db {
       tunjangan: e.tunjangan ?? 0,
       aktif: e.aktif !== false,
     }));
-    db.payroll = db.payroll ?? [];
+    db.payroll = (db.payroll ?? []).map((p) => ({
+      ...p,
+      penguranganGaji: p.penguranganGaji ?? 0,
+    }));
     db.nonPermanent = db.nonPermanent ?? [];
     return db;
   } catch {
@@ -247,6 +250,7 @@ export async function savePayroll(
     zakat: data.line.zakat,
     tanggalPemotongan: tgl,
     fasilitasPajak: "Tanpa Fasilitas",
+    penguranganGaji: Math.max(0, data.line.penguranganGaji ?? 0),
   };
   if (idx >= 0) db.payroll[idx] = next;
   else db.payroll.push(next);
@@ -293,6 +297,7 @@ export async function copyMonth(
       thr: 0,
       tantiem: 0,
       natura: 0,
+      penguranganGaji: 0,
       tanggalPemotongan: tgl,
     };
     if (idx >= 0) db.payroll[idx] = { ...db.payroll[idx], ...next, id: db.payroll[idx].id };

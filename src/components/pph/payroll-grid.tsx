@@ -13,7 +13,7 @@ import { formatPct, formatRp, MONTHS } from "@/lib/pph/format";
 import { canAddSalary, showInPayrollRecap } from "@/lib/pph/status";
 import { yearOptions } from "@/lib/pph/tax-year";
 import { copyMonth, deletePayroll, savePayroll } from "@/lib/server/pph";
-import type { Employee, PayrollLine } from "@/lib/pph/types";
+import { gajiDibayar, type Employee, type PayrollLine } from "@/lib/pph/types";
 import { cn } from "@/lib/utils";
 
 type FormState = {
@@ -23,6 +23,7 @@ type FormState = {
   uangLembur: number;
   honorarium: number;
   bonus: number;
+  penguranganGaji: number;
 };
 
 const EMPTY_FORM: FormState = {
@@ -32,6 +33,7 @@ const EMPTY_FORM: FormState = {
   uangLembur: 0,
   honorarium: 0,
   bonus: 0,
+  penguranganGaji: 0,
 };
 
 export function PayrollGrid({
@@ -99,7 +101,7 @@ export function PayrollGrid({
       const line = byEmp.get(emp.id)!;
       const calc = calculateMonthly(
         {
-          gaji: line.gaji,
+          gaji: gajiDibayar(line.gaji, line.penguranganGaji),
           tunjangan: line.tunjangan,
           honorarium: line.honorarium,
           uangMakan: line.uangMakan,
@@ -137,7 +139,7 @@ export function PayrollGrid({
     selected &&
     calculateMonthly(
       {
-        gaji: form.gaji,
+        gaji: gajiDibayar(form.gaji, form.penguranganGaji),
         tunjangan: form.tunjangan,
         honorarium: form.honorarium,
         uangMakan: existing?.uangMakan ?? 0,
@@ -173,6 +175,7 @@ export function PayrollGrid({
       uangLembur: 0,
       honorarium: 0,
       bonus: 0,
+      penguranganGaji: 0,
     });
     setOpen(true);
   }
@@ -186,6 +189,7 @@ export function PayrollGrid({
       uangLembur: line.uangLembur,
       honorarium: line.honorarium,
       bonus: line.bonus + line.thr,
+      penguranganGaji: line.penguranganGaji ?? 0,
     });
     setOpen(true);
   }
@@ -201,6 +205,7 @@ export function PayrollGrid({
         uangLembur: line.uangLembur,
         honorarium: line.honorarium,
         bonus: line.bonus + line.thr,
+        penguranganGaji: line.penguranganGaji ?? 0,
       });
       return;
     }
@@ -211,6 +216,7 @@ export function PayrollGrid({
       uangLembur: 0,
       honorarium: 0,
       bonus: 0,
+      penguranganGaji: 0,
     });
   }
 
@@ -237,6 +243,7 @@ export function PayrollGrid({
           thr: 0,
           tantiem: line?.tantiem ?? 0,
           zakat: line?.zakat ?? 0,
+          penguranganGaji: Math.max(0, form.penguranganGaji),
         },
       },
     });
@@ -348,7 +355,14 @@ export function PayrollGrid({
                     <div className="text-[11px] text-muted">{emp.jabatan}</div>
                   </td>
                   <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
-                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji)}</td>
+                  <td className="px-3 py-1.5 tabular-nums">
+                    {formatRp(gajiDibayar(line.gaji, line.penguranganGaji))}
+                    {line.penguranganGaji ? (
+                      <div className="text-[11px] text-muted">
+                        potongan {formatRp(line.penguranganGaji)}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className="px-3 py-1.5 tabular-nums">
                     {formatRp(tunjanganRecap)}
                     {line.uangLembur ? (
@@ -401,7 +415,8 @@ export function PayrollGrid({
         </div>
       )}
       <p className="text-xs text-muted">
-        Gaji tersimpan per tahun dan bulan. Kolom tunjangan di rekapan = tunjangan + lembur.
+        Gaji tersimpan per tahun dan bulan. Kolom tunjangan di rekapan = tunjangan + lembur. Pengurangan
+        disiplin / masuk tengah bulan memotong gaji pokok.
       </p>
 
       <GlassModal
@@ -437,6 +452,15 @@ export function PayrollGrid({
           <Field label="Gaji" hint="Dasar dari master karyawan">
             <MoneyInput value={form.gaji} onChange={(gaji) => setForm({ ...form, gaji })} />
           </Field>
+          <Field
+            label="Pengurangan gaji"
+            hint="Kurang disiplin atau masuk di tengah bulan — memotong gaji pokok"
+          >
+            <MoneyInput
+              value={form.penguranganGaji}
+              onChange={(penguranganGaji) => setForm({ ...form, penguranganGaji })}
+            />
+          </Field>
           <Field label="Tunjangan" hint="Dasar dari master karyawan">
             <MoneyInput
               value={form.tunjangan}
@@ -461,7 +485,13 @@ export function PayrollGrid({
         </div>
 
         {preview ? (
-          <div className="glass-dark mt-4 grid grid-cols-3 gap-3 rounded-[20px] px-4 py-3 text-sm">
+          <div className="glass-dark mt-4 grid grid-cols-2 gap-3 rounded-[20px] px-4 py-3 text-sm sm:grid-cols-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/55">
+                Gaji diterima
+              </p>
+              <p className="mt-1 tabular-nums">{formatRp(gajiDibayar(form.gaji, form.penguranganGaji))}</p>
+            </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-white/55">
                 Tunjangan rekapan
