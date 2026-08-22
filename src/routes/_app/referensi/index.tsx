@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/layout/app-shell";
+import { VirtualSheet } from "@/components/pph/virtual-sheet";
 import { Card } from "@/components/ui/card";
 import { formatPct, formatRp } from "@/lib/pph/format";
 import { OBJEK_PAJAK } from "@/lib/pph/objek-pajak";
@@ -55,9 +56,13 @@ function ReferensiPage() {
       </div>
       <Card className="mt-4">
         <h2 className="font-display text-xl">Daftar objek pajak</h2>
-        <div className="mt-3 overflow-auto">
-          <table className="sheet-grid w-full min-w-[720px] text-left text-sm">
-            <thead>
+        <div className="mt-3">
+          <VirtualSheet
+            count={OBJEK_PAJAK.length}
+            rowHeight={44}
+            minWidth="720px"
+            maxHeight="min(52vh, 520px)"
+            header={
               <tr>
                 <th className="px-3 py-2">Kode</th>
                 <th className="px-3 py-2">Uraian</th>
@@ -65,9 +70,11 @@ function ReferensiPage() {
                 <th className="px-3 py-2">Tarif</th>
                 <th className="px-3 py-2">Sifat</th>
               </tr>
-            </thead>
-            <tbody>
-              {OBJEK_PAJAK.map((o) => (
+            }
+            renderRow={(i) => {
+              const o = OBJEK_PAJAK[i];
+              if (!o) return null;
+              return (
                 <tr key={o.kode}>
                   <td className="px-3 py-2 tabular-nums">{o.kode}</td>
                   <td className="px-3 py-2">{o.nama}</td>
@@ -75,9 +82,9 @@ function ReferensiPage() {
                   <td className="px-3 py-2">{String(o.tarif)}</td>
                   <td className="px-3 py-2">{o.sifat}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              );
+            }}
+          />
         </div>
       </Card>
     </div>

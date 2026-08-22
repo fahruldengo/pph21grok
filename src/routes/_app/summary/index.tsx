@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/layout/app-shell";
 import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { VirtualSheet } from "@/components/pph/virtual-sheet";
 import { YearSelect } from "@/components/pph/year-select";
 import { Badge } from "@/components/ui/card";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
@@ -44,7 +45,7 @@ function SummaryPage() {
       return { bruto: r.bruto, pph: r.pph, line };
     });
     const monthsForAnnual = perMonth
-      .map((x, i) =>
+      .map((x) =>
         x.line
           ? {
               gaji: x.line.gaji,
@@ -87,8 +88,8 @@ function SummaryPage() {
         ptkp: emp.ptkp,
         grossUp: emp.grossUp,
         punyaNpwp: emp.punyaNpwp,
-        jenisPemotongan: "FullYear",
-        monthsWorked: emp.bulanAkhir - emp.bulanMulai + 1,
+        jenisPemotongan: emp.bulanMulai === 1 && emp.bulanAkhir === 12 ? "FullYear" : "Annualized",
+        monthsWorked: Math.max(1, emp.bulanAkhir - emp.bulanMulai + 1),
         pphSebelumnya: 0,
         netoSebelumnya: 0,
         months: monthsForAnnual,
@@ -107,45 +108,52 @@ function SummaryPage() {
       <PageHeader
         kicker={`Sheet SUMMARY · ${tahun}`}
         title="Pemotongan setahun"
-        description="Bruto dan PPh per bulan, dibandingkan dengan PPh Pasal 17 pada perhitungan A1."
+        description="Bruto dan PPh per bulan, termasuk karyawan resign/separuh tahun, dibandingkan dengan PPh Pasal 17 pada perhitungan A1."
         actions={<YearSelect value={tahun} onChange={setTahun} />}
       />
-      <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-        <table className="sheet-grid w-full min-w-[1400px] text-left text-xs">
-          <thead>
-            <tr>
-              <th className="px-2 py-2">Nama</th>
-              {MONTHS.map((m) => (
-                <th key={m.id} className="px-2 py-2">
-                  PPh {m.short}
-                </th>
-              ))}
-              <th className="px-2 py-2">Jumlah</th>
-              <th className="px-2 py-2">A1</th>
-              <th className="px-2 py-2">Selisih</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paged.rows.map((r) => (
-              <tr key={r.emp.id}>
-                <td className="px-2 py-2 font-medium">{r.emp.nama}</td>
-                {r.perMonth.map((m, i) => (
-                  <td key={i} className="px-2 py-2 tabular-nums">
-                    {m.pph ? formatRp(m.pph, false) : "—"}
-                  </td>
-                ))}
-                <td className="px-2 py-2 tabular-nums font-semibold">{formatRp(r.potong, false)}</td>
-                <td className="px-2 py-2 tabular-nums">{formatRp(r.annual.pphTerutang, false)}</td>
-                <td className="px-2 py-2">
-                  <Badge tone={r.selisih < 0 ? "ok" : r.selisih > 0 ? "warn" : "neutral"}>
-                    {r.selisih === 0 ? "NIHIL" : formatRp(r.selisih)}
-                  </Badge>
-                </td>
-              </tr>
+      <VirtualSheet
+        count={paged.rows.length}
+        rowHeight={52}
+        minWidth="1480px"
+        header={
+          <tr>
+            <th className="sticky left-0 z-10 px-2 py-2">Nama</th>
+            <th className="px-2 py-2">Status</th>
+            {MONTHS.map((m) => (
+              <th key={m.id} className="px-2 py-2">
+                PPh {m.short}
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
+            <th className="px-2 py-2">Jumlah</th>
+            <th className="px-2 py-2">A1</th>
+            <th className="px-2 py-2">Selisih</th>
+          </tr>
+        }
+        renderRow={(i) => {
+          const r = paged.rows[i];
+          if (!r) return null;
+          return (
+            <tr key={r.emp.id}>
+              <td className="sticky left-0 z-10 bg-elevated px-2 py-2 font-medium">{r.emp.nama}</td>
+              <td className="px-2 py-2">
+                <Badge tone={r.emp.aktif ? "ok" : "warn"}>{r.emp.aktif ? "Aktif" : "Resign"}</Badge>
+              </td>
+              {r.perMonth.map((m, idx) => (
+                <td key={idx} className="px-2 py-2 tabular-nums">
+                  {m.pph ? formatRp(m.pph) : "—"}
+                </td>
+              ))}
+              <td className="px-2 py-2 tabular-nums font-semibold">{formatRp(r.potong)}</td>
+              <td className="px-2 py-2 tabular-nums">{formatRp(r.annual.pphTerutang)}</td>
+              <td className="px-2 py-2">
+                <Badge tone={r.selisih < 0 ? "ok" : r.selisih > 0 ? "warn" : "neutral"}>
+                  {r.selisih === 0 ? "NIHIL" : formatRp(r.selisih)}
+                </Badge>
+              </td>
+            </tr>
+          );
+        }}
+      />
       <TablePager
         total={paged.total}
         page={paged.page}

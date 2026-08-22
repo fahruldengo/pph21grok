@@ -66,7 +66,7 @@ function mapEmployee(row: Record<string, unknown>): Employee {
     bulanMulai: num(row.bulan_mulai) || 1,
     bulanAkhir: num(row.bulan_akhir) || 12,
     grossUp: Boolean(row.gross_up),
-    aktif: Boolean(row.aktif),
+    aktif: row.aktif !== false && row.aktif !== "f",
     gaji: num(row.gaji),
     tunjangan: num(row.tunjangan),
   };
@@ -160,6 +160,7 @@ const employeeInput = z.object({
   grossUp: z.boolean(),
   gaji: z.number(),
   tunjangan: z.number(),
+  aktif: z.boolean().optional(),
 });
 
 export const getWorkspace = createServerFn({ method: "GET" })
@@ -174,7 +175,7 @@ export const getWorkspace = createServerFn({ method: "GET" })
       select * from tax_elements where user_id = ${context.userId} limit 1
     `;
     const employees = await sql<Record<string, unknown>>`
-      select * from employees where user_id = ${context.userId} and aktif = true order by id
+      select * from employees where user_id = ${context.userId} order by aktif desc, id
     `;
     return {
       company: mapCompany(companies[0] ?? {}),
@@ -275,6 +276,7 @@ export const saveEmployee = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const kodeNegara = data.negara.toLowerCase() === "indonesia" ? "IDN" : "IDN";
+    const aktif = data.aktif ?? true;
     if (data.id) {
       await sql`
         update employees set
@@ -294,7 +296,8 @@ export const saveEmployee = createServerFn({ method: "POST" })
           bulan_akhir = ${data.bulanAkhir},
           gross_up = ${data.grossUp},
           gaji = ${data.gaji},
-          tunjangan = ${data.tunjangan}
+          tunjangan = ${data.tunjangan},
+          aktif = ${aktif}
         where id = ${data.id} and user_id = ${context.userId}
       `;
       return { id: data.id };
@@ -303,13 +306,13 @@ export const saveEmployee = createServerFn({ method: "POST" })
       insert into employees (
         user_id, nama, jenis_kelamin, jabatan, nik, npwp, punya_npwp,
         kode_objek_pajak, ptkp, alamat, karyawan_asing, negara, kode_negara,
-        bulan_mulai, bulan_akhir, gross_up, gaji, tunjangan
+        bulan_mulai, bulan_akhir, gross_up, gaji, tunjangan, aktif
       ) values (
         ${context.userId}, ${data.nama}, ${data.jenisKelamin}, ${data.jabatan},
         ${data.nik}, ${data.npwp}, ${data.punyaNpwp}, ${data.kodeObjekPajak},
         ${data.ptkp}, ${data.alamat}, ${data.karyawanAsing}, ${data.negara},
         ${kodeNegara}, ${data.bulanMulai}, ${data.bulanAkhir}, ${data.grossUp},
-        ${data.gaji}, ${data.tunjangan}
+        ${data.gaji}, ${data.tunjangan}, ${aktif}
       ) returning id
     `;
     return { id: rows[0]?.id ?? 0 };
@@ -375,10 +378,32 @@ export const savePayroll = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const owned = await sql<{ id: number }>`
-      select id from employees where id = ${data.line.employeeId} and user_id = ${context.userId}
+    const owned = await sql<{
+      id: number;
+      aktif: boolean;
+      bulan_mulai: number;
+      bulan_akhir: number;
+    }>`
+      select id, aktif, bulan_mulai, bulan_akhir from employees
+      where id = ${data.line.employeeId} and user_id = ${context.userId}
     `;
     if (!owned[0]) throw new Error("Karyawan tidak ditemukan");
+    const inRange =
+      data.bulan >= (Number(owned[0].bulan_mulai) || 1) &&
+      data.bulan <= (Number(owned[0].bulan_akhir) || 12);
+    const existing = await sql<{ id: number }>`
+      select id from payroll_lines
+      where user_id = ${context.userId}
+        and employee_id = ${data.line.employeeId}
+        and tahun = ${data.tahun}
+        and bulan = ${data.bulan}
+      limit 1
+    `;
+    if (!existing[0] && (!owned[0].aktif || !inRange)) {
+      throw new Error(
+        "Karyawan resign/keluar tidak bisa ditambah gaji. Data historis tetap masuk laporan tahunan.",
+      );
+    }
     const tgl = lastDayOfMonth(data.tahun, data.bulan);
     const l = data.line as PayrollSave;
     await sql`
@@ -442,12 +467,28 @@ export const copyMonth = createServerFn({ method: "POST" })
     const sql = await getSql();
     const fromTahun = data.fromTahun ?? data.tahun;
     const tgl = lastDayOfMonth(data.tahun, data.toBulan);
+    const staff = await sql<{ id: number; aktif: boolean; bulan_mulai: number; bulan_akhir: number }>`
+      select id, aktif, bulan_mulai, bulan_akhir from employees where user_id = ${context.userId}
+    `;
+    const allow = new Set(
+      staff
+        .filter(
+          (e) =>
+            Boolean(e.aktif) &&
+            data.toBulan >= (Number(e.bulan_mulai) || 1) &&
+            data.toBulan <= (Number(e.bulan_akhir) || 12),
+        )
+        .map((e) => Number(e.id)),
+    );
     const src = await sql<Record<string, unknown>>`
       select * from payroll_lines
       where user_id = ${context.userId} and tahun = ${fromTahun} and bulan = ${data.fromBulan}
     `;
+    let copied = 0;
     for (const row of src) {
       const empId = num(row.employee_id);
+      if (!allow.has(empId)) continue;
+      copied += 1;
       await sql`
         insert into payroll_lines (
           user_id, employee_id, tahun, bulan, gaji, tunjangan, honorarium,
@@ -468,7 +509,7 @@ export const copyMonth = createServerFn({ method: "POST" })
           natura = excluded.natura
       `;
     }
-    return { copied: src.length };
+    return { copied };
   });
 
 export const listNonPermanent = createServerFn({ method: "GET" })

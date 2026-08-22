@@ -64,7 +64,7 @@ export function GlassModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={cn("modal-panel glass-strong rounded-[28px] p-5 sm:p-6", wide && "modal-panel-wide")}
+        className={cn("modal-panel rounded-[28px] p-5 sm:p-6", wide && "modal-panel-wide")}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>

@@ -19,7 +19,7 @@ function PenghasilanPage() {
       <PageHeader
         kicker={`Sheet ${monthLabel(bulan).toUpperCase()} ${tahun}`}
         title="Input penghasilan"
-        description="Pilih tahun pajak, lalu tambah gaji lewat popup. Lembur diinput terpisah, tetapi di rekapan masuk kolom tunjangan."
+        description="Pilih tahun pajak, lalu tambah gaji lewat popup. Lembur diinput terpisah, tetapi di rekapan masuk kolom tunjangan. Karyawan resign tidak muncul di daftar tambah gaji."
       />
       {ws.data ? (
         <PayrollGrid

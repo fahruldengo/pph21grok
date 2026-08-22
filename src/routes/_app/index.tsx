@@ -59,6 +59,8 @@ function Dashboard() {
   const ytdPph = monthStats.reduce((s, m) => s + m.pph, 0);
   const ytdBruto = monthStats.reduce((s, m) => s + m.bruto, 0);
   const janCount = monthStats[0]?.n ?? 0;
+  const aktifCount = employees.filter((e) => e.aktif).length;
+  const resignCount = employees.length - aktifCount;
 
   let annualPph = 0;
   for (const emp of employees) {
@@ -127,7 +129,15 @@ function Dashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Karyawan aktif" value={String(employees.length)} hint={`${janCount} ada gaji Januari`} />
+        <Metric
+          label="Karyawan aktif"
+          value={String(aktifCount)}
+          hint={
+            resignCount
+              ? `${resignCount} resign tetap di laporan tahunan`
+              : `${janCount} ada gaji Januari`
+          }
+        />
         <Metric label="Bruto YTD" value={formatRp(ytdBruto)} hint="Jumlah penghasilan bruto terhitung" />
         <Metric label="PPh 21 YTD (TER)" value={formatRp(ytdPph)} hint="Akumulasi pemotongan bulanan" />
         <Metric label="PPh Pasal 17 tahunan" value={formatRp(annualPph)} hint="Rekonsiliasi A1 / Desember" />

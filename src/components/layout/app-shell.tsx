@@ -6,6 +6,7 @@ import {
   Building2,
   Calculator,
   CalendarRange,
+  ChevronDown,
   FileSpreadsheet,
   LayoutDashboard,
   Library,
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { SystemClock } from "@/components/layout/clock";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -54,6 +56,18 @@ const NAV = [
     ],
   },
 ];
+
+const NAV_KEY = "pajak21.nav-open";
+
+function readNavOpen(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(NAV_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
 
 export function LiquidBackdrop() {
   return (
@@ -100,7 +114,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="size-5" />
           </button>
-          <span className="font-display text-[17px] font-semibold tracking-tight">Pajak21</span>
+          <div className="text-center">
+            <span className="block font-display text-[17px] font-semibold tracking-tight">Pajak21</span>
+            <SystemClock compact />
+          </div>
           <div className="scale-90">
             <UserButton />
           </div>
@@ -128,8 +145,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
       </div>
 
-      <div className="relative z-10 md:flex md:gap-3 md:p-3">
-        <aside className="glass sticky top-3 hidden h-[calc(100vh-24px)] w-[248px] shrink-0 flex-col overflow-y-auto rounded-[28px] px-3 py-4 md:flex">
+      <div className="relative z-10 hidden px-3 pt-3 md:flex md:justify-end">
+        <div className="glass rounded-full px-4 py-2">
+          <SystemClock />
+        </div>
+      </div>
+
+      <div className="relative z-10 md:flex md:gap-3 md:p-3 md:pt-2">
+        <aside className="glass sticky top-3 hidden h-[calc(100vh-72px)] w-[248px] shrink-0 flex-col overflow-y-auto rounded-[28px] px-3 py-4 md:flex">
           <div className="relative z-10 flex h-full flex-col">
             <Brand />
             <div className="mt-6 flex-1">
@@ -166,34 +189,63 @@ function Brand() {
 
 function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() =>
+    typeof window === "undefined" ? {} : readNavOpen(),
+  );
+
+  function toggle(label: string) {
+    setOpenMap((prev) => {
+      const next = { ...prev, [label]: !(prev[label] ?? true) };
+      try {
+        localStorage.setItem(NAV_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
   return (
-    <nav className="space-y-5">
-      {NAV.map((group) => (
-        <div key={group.label}>
-          <p className="px-3 pb-1.5 text-[11px] font-semibold text-subtle">{group.label}</p>
-          <ul className="space-y-0.5">
-            {group.items.map((item) => {
-              const active =
-                item.to === "/"
-                  ? pathname === "/"
-                  : pathname === item.to || pathname.startsWith(`${item.to}/`);
-              const Icon = item.icon;
-              return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    onClick={onNavigate}
-                    className={cn("nav-pill", active && "nav-pill-active")}
-                  >
-                    <Icon className={cn("size-4 shrink-0", active && "text-accent")} />
-                    {item.title}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    <nav className="space-y-2">
+      {NAV.map((group) => {
+        const expanded = openMap[group.label] ?? true;
+        return (
+          <div key={group.label}>
+            <button
+              type="button"
+              className="nav-group-toggle"
+              onClick={() => toggle(group.label)}
+              aria-expanded={expanded}
+            >
+              <span>{group.label}</span>
+              <ChevronDown className={cn("nav-chevron size-3.5", expanded && "is-open")} />
+            </button>
+            <div className={cn("nav-group-body", expanded && "is-open")}>
+              <ul className="space-y-0.5 pt-0.5">
+                {group.items.map((item) => {
+                  const active =
+                    item.to === "/"
+                      ? pathname === "/"
+                      : pathname === item.to || pathname.startsWith(`${item.to}/`);
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.to}>
+                      <Link
+                        to={item.to}
+                        onClick={onNavigate}
+                        className={cn("nav-pill", active && "nav-pill-active")}
+                      >
+                        <Icon className={cn("size-4 shrink-0", active && "text-accent")} />
+                        {item.title}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
+        );
+      })}
     </nav>
   );
 }

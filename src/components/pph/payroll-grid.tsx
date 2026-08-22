@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Field, MoneyInput, Select } from "@/components/ui/input";
 import { GlassModal } from "@/components/ui/modal";
 import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { VirtualSheet } from "@/components/pph/virtual-sheet";
 import { YearSelect } from "@/components/pph/year-select";
 import { calculateMonthly, type TaxElements } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS } from "@/lib/pph/format";
+import { canAddSalary, showInPayrollRecap } from "@/lib/pph/status";
 import { yearOptions } from "@/lib/pph/tax-year";
 import { copyMonth, deletePayroll, savePayroll } from "@/lib/server/pph";
 import type { Employee, PayrollLine } from "@/lib/pph/types";
@@ -92,7 +94,7 @@ export function PayrollGrid({
   });
 
   const rows = employees
-    .filter((emp) => byEmp.has(emp.id))
+    .filter((emp) => byEmp.has(emp.id) && showInPayrollRecap(emp, bulan))
     .map((emp) => {
       const line = byEmp.get(emp.id)!;
       const calc = calculateMonthly(
@@ -127,7 +129,7 @@ export function PayrollGrid({
   const totalBruto = rows.reduce((s, r) => s + r.calc.bruto, 0);
 
   const taken = new Set(rows.map((r) => r.emp.id));
-  const available = employees.filter((e) => editingId === e.id || !taken.has(e.id));
+  const available = employees.filter((e) => canAddSalary(e, bulan) && (editingId === e.id || !taken.has(e.id)));
 
   const selected = employees.find((e) => e.id === form.employeeId);
   const existing = typeof form.employeeId === "number" ? byEmp.get(form.employeeId) : undefined;
@@ -154,8 +156,8 @@ export function PayrollGrid({
     );
 
   function openAdd() {
-    if (!employees.length) {
-      toast.error("Tambah karyawan dulu di menu Karyawan");
+    if (!employees.some((e) => canAddSalary(e, bulan))) {
+      toast.error("Tidak ada karyawan aktif untuk bulan ini. Yang resign hanya masuk laporan tahunan.");
       return;
     }
     if (!available.length) {
@@ -314,60 +316,57 @@ export function PayrollGrid({
         </div>
       ) : (
         <div>
-          <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-            <table className="sheet-grid min-w-[1180px] w-full text-left text-sm">
-              <thead>
-                <tr>
-                  <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
-                  <th className="px-3 py-2">PTKP</th>
-                  <th className="px-3 py-2">Gaji</th>
-                  <th className="px-3 py-2">Tunjangan</th>
-                  <th className="px-3 py-2">Honor</th>
-                  <th className="px-3 py-2">Bonus / THR</th>
-                  <th className="px-3 py-2">Premi</th>
-                  <th className="px-3 py-2">Tunj. PPh</th>
-                  <th className="px-3 py-2">Bruto</th>
-                  <th className="px-3 py-2">TER</th>
-                  <th className="px-3 py-2">PPh 21</th>
-                  <th className="px-3 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {paged.rows.map(({ emp, line, calc, tunjanganRecap }) => (
-                  <tr key={`${emp.id}-${tahun}-${bulan}`} className="hover:bg-accent-soft/40">
-                    <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
-                      <div>{emp.nama}</div>
-                      <div className="text-[11px] text-muted">{emp.jabatan}</div>
-                    </td>
-                    <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
-                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji, false)}</td>
-                    <td className="px-3 py-1.5 tabular-nums">
-                      {formatRp(tunjanganRecap, false)}
-                      {line.uangLembur ? (
-                        <div className="text-[11px] text-muted">
-                          termasuk lembur {formatRp(line.uangLembur, false)}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.honorarium, false)}</td>
-                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.bonus + line.thr, false)}</td>
-                    <td className="cell-computed px-3 py-1.5 tabular-nums">
-                      {formatRp(calc.premi.totalAddBruto, false)}
-                    </td>
-                    <td className="cell-computed px-3 py-1.5 tabular-nums">
-                      {formatRp(calc.tunjanganPph, false)}
-                    </td>
-                    <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">
-                      {formatRp(calc.bruto, false)}
-                    </td>
-                    <td className="px-3 py-1.5 text-xs">
-                      {calc.kategoriTer}
-                      <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
-                    </td>
-                    <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">
-                      {formatRp(calc.pph, false)}
-                    </td>
-                    <td className="px-2 py-1.5">
+          <VirtualSheet
+            count={paged.rows.length}
+            rowHeight={56}
+            minWidth="1180px"
+            header={
+              <tr>
+                <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
+                <th className="px-3 py-2">PTKP</th>
+                <th className="px-3 py-2">Gaji</th>
+                <th className="px-3 py-2">Tunjangan</th>
+                <th className="px-3 py-2">Honor</th>
+                <th className="px-3 py-2">Bonus / THR</th>
+                <th className="px-3 py-2">Premi</th>
+                <th className="px-3 py-2">Tunj. PPh</th>
+                <th className="px-3 py-2">Bruto</th>
+                <th className="px-3 py-2">TER</th>
+                <th className="px-3 py-2">PPh 21</th>
+                <th className="px-3 py-2" />
+              </tr>
+            }
+            renderRow={(i) => {
+              const row = paged.rows[i];
+              if (!row) return null;
+              const { emp, line, calc, tunjanganRecap } = row;
+              const editable = canAddSalary(emp, bulan);
+              return (
+                <tr key={`${emp.id}-${tahun}-${bulan}`} className="hover:bg-accent-soft/40">
+                  <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
+                    <div>{emp.nama}</div>
+                    <div className="text-[11px] text-muted">{emp.jabatan}</div>
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji)}</td>
+                  <td className="px-3 py-1.5 tabular-nums">
+                    {formatRp(tunjanganRecap)}
+                    {line.uangLembur ? (
+                      <div className="text-[11px] text-muted">termasuk lembur {formatRp(line.uangLembur)}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.honorarium)}</td>
+                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.bonus + line.thr)}</td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums">{formatRp(calc.premi.totalAddBruto)}</td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums">{formatRp(calc.tunjanganPph)}</td>
+                  <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">{formatRp(calc.bruto)}</td>
+                  <td className="px-3 py-1.5 text-xs">
+                    {calc.kategoriTer}
+                    <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
+                  </td>
+                  <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">{formatRp(calc.pph)}</td>
+                  <td className="px-2 py-1.5">
+                    {editable ? (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" onClick={() => openEdit(emp, line)}>
                           <Pencil className="size-3.5" />
@@ -376,19 +375,19 @@ export function PayrollGrid({
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() =>
-                            remove.mutate({ data: { tahun, bulan, employeeId: emp.id } })
-                          }
+                          onClick={() => remove.mutate({ data: { tahun, bulan, employeeId: emp.id } })}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ) : (
+                      <span className="px-2 text-[11px] font-medium text-muted">Resign</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            }}
+          />
           <TablePager
             total={paged.total}
             page={paged.page}
@@ -495,7 +494,7 @@ export function PayrollGrid({
 
 function InputLocked({ value }: { value: string }) {
   return (
-    <div className="flex h-11 items-center rounded-[14px] border border-white/55 bg-white/35 px-3 text-[15px] font-medium">
+    <div className="flex h-11 items-center rounded-[14px] border border-border bg-white px-3 text-[15px] font-medium">
       {value}
     </div>
   );

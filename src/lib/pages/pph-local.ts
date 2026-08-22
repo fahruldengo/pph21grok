@@ -7,6 +7,7 @@ import type {
   PayrollLine,
   PayrollSave,
 } from "@/lib/pph/types";
+import { canAddSalary } from "@/lib/pph/status";
 import { dbKey, readSession } from "./storage";
 
 const DB_VERSION = 3;
@@ -69,6 +70,7 @@ function load(userId: string): Db {
       ...e,
       gaji: e.gaji ?? 0,
       tunjangan: e.tunjangan ?? 0,
+      aktif: e.aktif !== false,
     }));
     db.payroll = db.payroll ?? [];
     db.nonPermanent = db.nonPermanent ?? [];
@@ -99,7 +101,7 @@ export async function getWorkspace() {
   return {
     company: db.company,
     elements: db.elements,
-    employees: db.employees.filter((e) => e.aktif),
+    employees: db.employees,
   };
 }
 
@@ -140,6 +142,7 @@ export async function saveEmployee(
     grossUp: boolean;
     gaji: number;
     tunjangan: number;
+    aktif?: boolean;
   }>,
 ) {
   const data = unwrap(input);
@@ -152,6 +155,7 @@ export async function saveEmployee(
             ...e,
             ...data,
             kodeNegara: "IDN",
+            aktif: data.aktif ?? e.aktif ?? true,
           }
         : e,
     );
@@ -176,7 +180,7 @@ export async function saveEmployee(
     bulanMulai: data.bulanMulai,
     bulanAkhir: data.bulanAkhir,
     grossUp: data.grossUp,
-    aktif: true,
+    aktif: data.aktif ?? true,
     gaji: data.gaji,
     tunjangan: data.tunjangan,
   });
@@ -216,13 +220,15 @@ export async function savePayroll(
   const data = unwrap(input);
   const userId = uid();
   const db = load(userId);
-  if (!db.employees.some((e) => e.id === data.line.employeeId)) {
-    throw new Error("Karyawan tidak ditemukan");
-  }
-  const tgl = lastDayOfMonth(data.tahun, data.bulan);
+  const emp = db.employees.find((e) => e.id === data.line.employeeId);
+  if (!emp) throw new Error("Karyawan tidak ditemukan");
   const idx = db.payroll.findIndex(
     (p) => p.employeeId === data.line.employeeId && p.tahun === data.tahun && p.bulan === data.bulan,
   );
+  if (idx < 0 && !canAddSalary(emp, data.bulan)) {
+    throw new Error("Karyawan resign/keluar tidak bisa ditambah gaji. Data historis tetap masuk laporan tahunan.");
+  }
+  const tgl = lastDayOfMonth(data.tahun, data.bulan);
   const next: PayrollLine = {
     id: idx >= 0 ? db.payroll[idx].id : db.nextPay++,
     employeeId: data.line.employeeId,
@@ -270,7 +276,11 @@ export async function copyMonth(
   const fromTahun = data.fromTahun ?? data.tahun;
   const tgl = lastDayOfMonth(data.tahun, data.toBulan);
   const src = db.payroll.filter((p) => p.tahun === fromTahun && p.bulan === data.fromBulan);
+  let copied = 0;
   for (const row of src) {
+    const emp = db.employees.find((e) => e.id === row.employeeId);
+    if (!emp || !canAddSalary(emp, data.toBulan)) continue;
+    copied += 1;
     const idx = db.payroll.findIndex(
       (p) => p.employeeId === row.employeeId && p.tahun === data.tahun && p.bulan === data.toBulan,
     );
@@ -289,7 +299,7 @@ export async function copyMonth(
     else db.payroll.push(next);
   }
   save(userId, db);
-  return { copied: src.length };
+  return { copied };
 }
 
 export async function listNonPermanent() {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/app-shell";
 import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { VirtualSheet } from "@/components/pph/virtual-sheet";
 import { YearSelect } from "@/components/pph/year-select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -122,9 +123,11 @@ function NonPegawaiPage() {
           </div>
         </Card>
         <div className="lg:col-span-3">
-          <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-          <table className="sheet-grid w-full min-w-[640px] text-left text-sm">
-            <thead>
+          <VirtualSheet
+            count={paged.rows.length}
+            rowHeight={52}
+            minWidth="640px"
+            header={
               <tr>
                 <th className="px-3 py-2">Nama</th>
                 <th className="px-3 py-2">Kode</th>
@@ -132,32 +135,31 @@ function NonPegawaiPage() {
                 <th className="px-3 py-2">PPh</th>
                 <th className="px-3 py-2" />
               </tr>
-            </thead>
-            <tbody>
-              {paged.rows.map((r) => {
-                const c = calculateNonPermanent({
-                  kodeObjekPajak: r.kodeObjekPajak,
-                  ptkp: r.ptkp,
-                  penghasilan: r.penghasilan,
-                  punyaNpwp: true,
-                });
-                return (
-                  <tr key={r.id}>
-                    <td className="px-3 py-2">{r.nama}</td>
-                    <td className="px-3 py-2">{r.kodeObjekPajak}</td>
-                    <td className="px-3 py-2 tabular-nums">{formatRp(r.penghasilan, false)}</td>
-                    <td className="px-3 py-2 tabular-nums font-semibold">{formatRp(c.pph, false)}</td>
-                    <td className="px-3 py-2">
-                      <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: r.id } })}>
-                        Hapus
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
+            }
+            renderRow={(i) => {
+              const r = paged.rows[i];
+              if (!r) return null;
+              const c = calculateNonPermanent({
+                kodeObjekPajak: r.kodeObjekPajak,
+                ptkp: r.ptkp,
+                penghasilan: r.penghasilan,
+                punyaNpwp: true,
+              });
+              return (
+                <tr key={r.id}>
+                  <td className="px-3 py-2">{r.nama}</td>
+                  <td className="px-3 py-2">{r.kodeObjekPajak}</td>
+                  <td className="px-3 py-2 tabular-nums">{formatRp(r.penghasilan)}</td>
+                  <td className="px-3 py-2 tabular-nums font-semibold">{formatRp(c.pph)}</td>
+                  <td className="px-3 py-2">
+                    <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: r.id } })}>
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              );
+            }}
+          />
           <TablePager
             total={paged.total}
             page={paged.page}
