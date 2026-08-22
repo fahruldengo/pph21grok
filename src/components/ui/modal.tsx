@@ -20,6 +20,8 @@ export function GlassModal({
 }) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(false);
 
@@ -41,18 +43,21 @@ export function GlassModal({
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKey);
-    const focusable = panelRef.current?.querySelector<HTMLElement>(
-      "input, select, textarea, button",
-    );
-    focusable?.focus();
+    const id = window.requestAnimationFrame(() => {
+      const field = panelRef.current?.querySelector<HTMLElement>(
+        "input:not([disabled]):not([tabindex='-1']), select:not([disabled]), textarea:not([disabled])",
+      );
+      field?.focus();
+    });
     return () => {
+      window.cancelAnimationFrame(id);
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!mounted || typeof document === "undefined") return null;
 
