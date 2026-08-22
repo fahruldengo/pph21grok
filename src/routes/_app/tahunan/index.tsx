@@ -1,16 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/layout/app-shell";
+import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { YearSelect } from "@/components/pph/year-select";
 import { Badge } from "@/components/ui/card";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
 import { formatRp } from "@/lib/pph/format";
+import { useTaxYear } from "@/lib/pph/tax-year";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 
 export const Route = createFileRoute("/_app/tahunan/")({ component: TahunanPage });
 
 function TahunanPage() {
   const ws = useWorkspace();
-  const year = ws.data?.company.tahunPajak ?? 2026;
-  const pay = useYearPayroll(year);
+  const { tahun, setTahun } = useTaxYear(ws.data?.company.tahunPajak ?? 2026);
+  const pay = useYearPayroll(tahun);
   const employees = ws.data?.employees ?? [];
   const elements = ws.data?.elements;
   const lines = pay.data ?? [];
@@ -73,12 +76,15 @@ function TahunanPage() {
     return { emp, annual, desember };
   });
 
+  const paged = usePaged(rows, "tahunan", 10);
+
   return (
     <div>
       <PageHeader
-        kicker="Sheet TAHUNAN & DES"
+        kicker={`Sheet TAHUNAN & DES · ${tahun}`}
         title="Perhitungan setahun / Desember"
         description="Biaya jabatan 5% (maks. Rp500.000/bulan), iuran pensiun, PTKP, PKP dibulatkan ribuan, tarif Pasal 17. PPh Desember = PPh setahun − TER Januari–November."
+        actions={<YearSelect value={tahun} onChange={setTahun} />}
       />
       <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
         <table className="sheet-grid w-full min-w-[1100px] text-left text-sm">
@@ -96,7 +102,7 @@ function TahunanPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ emp, annual, desember }) => (
+            {paged.rows.map(({ emp, annual, desember }) => (
               <tr key={emp.id}>
                 <td className="px-3 py-2 font-medium">{emp.nama}</td>
                 <td className="px-3 py-2">{emp.ptkp}</td>
@@ -116,6 +122,16 @@ function TahunanPage() {
           </tbody>
         </table>
       </div>
+      <TablePager
+        total={paged.total}
+        page={paged.page}
+        pages={paged.pages}
+        from={paged.from}
+        to={paged.to}
+        pageSize={paged.pageSize}
+        onPage={paged.setPage}
+        onPageSize={paged.setPageSize}
+      />
     </div>
   );
 }

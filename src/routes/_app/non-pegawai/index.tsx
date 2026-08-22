@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/app-shell";
+import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { YearSelect } from "@/components/pph/year-select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
@@ -10,6 +12,7 @@ import { calculateNonPermanent } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS } from "@/lib/pph/format";
 import { OBJEK_PAJAK } from "@/lib/pph/objek-pajak";
 import { PTKP_STATUSES } from "@/lib/pph/ptkp";
+import { useTaxYear } from "@/lib/pph/tax-year";
 import { deleteNonPermanent, listNonPermanent, saveNonPermanent } from "@/lib/server/pph";
 import { useWorkspace } from "@/lib/pph/use-workspace";
 
@@ -18,6 +21,7 @@ export const Route = createFileRoute("/_app/non-pegawai/")({ component: NonPegaw
 function NonPegawaiPage() {
   const ws = useWorkspace();
   const qc = useQueryClient();
+  const { tahun, setTahun } = useTaxYear(ws.data?.company.tahunPajak ?? 2026);
   const list = useQuery({ queryKey: ["nonperm"], queryFn: () => listNonPermanent() });
   const [form, setForm] = useState({
     nama: "",
@@ -26,7 +30,7 @@ function NonPegawaiPage() {
     kodeObjekPajak: "21-100-20",
     penghasilan: 500000,
     masa: 12,
-    tahun: ws.data?.company.tahunPajak ?? 2026,
+    tahun,
     jenisDokumen: "Contract",
     nomorDokumen: "1",
   });
@@ -52,12 +56,19 @@ function NonPegawaiPage() {
     punyaNpwp: true,
   });
 
+  const yearRows = useMemo(
+    () => (list.data ?? []).filter((r) => r.tahun === tahun),
+    [list.data, tahun],
+  );
+  const paged = usePaged(yearRows, "nonpegawai", 10);
+
   return (
     <div>
       <PageHeader
-        kicker="Sheet BP21 NON PEGAWAI TETAP"
+        kicker={`Sheet BP21 NON PEGAWAI TETAP · ${tahun}`}
         title="Bukan pegawai tetap"
         description="Honor, jasa, tenaga ahli, harian, pesangon. DPP = penghasilan × deemed (50% atau 100%) sesuai kode objek pajak."
+        actions={<YearSelect value={tahun} onChange={(y) => { setTahun(y); setForm((f) => ({ ...f, tahun: y })); }} />}
       />
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">
@@ -103,14 +114,15 @@ function NonPegawaiPage() {
                 ))}
               </Select>
             </Field>
-            <Button onClick={() => save.mutate({ data: form })}>Simpan transaksi</Button>
+            <Button onClick={() => save.mutate({ data: { ...form, tahun } })}>Simpan transaksi</Button>
           </div>
           <div className="mt-4 rounded-[16px] bg-computed p-4 text-sm">
             <p>Deemed {preview.deemed}% · DPP {formatRp(preview.dpp)}</p>
             <p className="mt-1 font-semibold">PPh 21 {formatRp(preview.pph)} ({formatPct(preview.tarif)})</p>
           </div>
         </Card>
-        <div className="lg:col-span-3 overflow-auto rounded-[20px] border border-border bg-elevated">
+        <div className="lg:col-span-3">
+          <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
           <table className="sheet-grid w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr>
@@ -122,7 +134,7 @@ function NonPegawaiPage() {
               </tr>
             </thead>
             <tbody>
-              {(list.data ?? []).map((r) => {
+              {paged.rows.map((r) => {
                 const c = calculateNonPermanent({
                   kodeObjekPajak: r.kodeObjekPajak,
                   ptkp: r.ptkp,
@@ -145,6 +157,17 @@ function NonPegawaiPage() {
               })}
             </tbody>
           </table>
+          </div>
+          <TablePager
+            total={paged.total}
+            page={paged.page}
+            pages={paged.pages}
+            from={paged.from}
+            to={paged.to}
+            pageSize={paged.pageSize}
+            onPage={paged.setPage}
+            onPageSize={paged.setPageSize}
+          />
         </div>
       </div>
     </div>

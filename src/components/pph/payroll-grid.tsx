@@ -1,12 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, MoneyInput, Select } from "@/components/ui/input";
 import { GlassModal } from "@/components/ui/modal";
+import { TablePager, usePaged } from "@/components/pph/table-pager";
+import { YearSelect } from "@/components/pph/year-select";
 import { calculateMonthly, type TaxElements } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS } from "@/lib/pph/format";
+import { yearOptions } from "@/lib/pph/tax-year";
 import { copyMonth, deletePayroll, savePayroll } from "@/lib/server/pph";
 import type { Employee, PayrollLine } from "@/lib/pph/types";
 import { cn } from "@/lib/utils";
@@ -36,6 +39,7 @@ export function PayrollGrid({
   tahun,
   bulan,
   onMonthChange,
+  onYearChange,
 }: {
   employees: Employee[];
   lines: PayrollLine[];
@@ -43,9 +47,11 @@ export function PayrollGrid({
   tahun: number;
   bulan: number;
   onMonthChange?: (bulan: number) => void;
+  onYearChange?: (tahun: number) => void;
 }) {
   const qc = useQueryClient();
   const [copyFrom, setCopyFrom] = useState(1);
+  const [copyFromYear, setCopyFromYear] = useState(tahun);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -80,6 +86,7 @@ export function PayrollGrid({
     mutationFn: copyMonth,
     onSuccess: async (r) => {
       await qc.invalidateQueries({ queryKey: ["payroll"] });
+      await qc.invalidateQueries({ queryKey: ["payroll-year"] });
       toast.success(`Disalin ${r.copied} baris`);
     },
   });
@@ -110,6 +117,12 @@ export function PayrollGrid({
       return { emp, line, calc, tunjanganRecap: line.tunjangan + line.uangLembur };
     });
 
+  const paged = usePaged(rows, "penghasilan", 10);
+  const { resetPage } = paged;
+
+  useEffect(() => {
+    resetPage();
+  }, [tahun, bulan, resetPage]);
   const totalPph = rows.reduce((s, r) => s + r.calc.pph, 0);
   const totalBruto = rows.reduce((s, r) => s + r.calc.bruto, 0);
 
@@ -230,6 +243,7 @@ export function PayrollGrid({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
+        {onYearChange ? <YearSelect value={tahun} onChange={onYearChange} /> : null}
         {onMonthChange
           ? MONTHS.map((m) => (
               <button
@@ -237,7 +251,7 @@ export function PayrollGrid({
                 type="button"
                 onClick={() => onMonthChange(m.id)}
                 className={cn(
-                  "h-9 rounded-full px-3 text-sm font-semibold transition-[background-color,transform] duration-150",
+                  "h-9 rounded-full px-3 text-sm font-semibold transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]",
                   m.id === bulan ? "bg-accent text-accent-fg" : "bg-computed text-muted hover:bg-accent-soft",
                 )}
               >
@@ -250,19 +264,30 @@ export function PayrollGrid({
             <Plus className="size-4" />
             Tambah gaji
           </Button>
+          <Select value={String(copyFromYear)} onChange={(e) => setCopyFromYear(Number(e.target.value))}>
+            {yearOptions(tahun).map((y) => (
+              <option key={y} value={y}>
+                Dari {y}
+              </option>
+            ))}
+          </Select>
           <Select value={String(copyFrom)} onChange={(e) => setCopyFrom(Number(e.target.value))}>
             {MONTHS.map((m) => (
               <option key={m.id} value={m.id}>
-                Salin dari {m.label}
+                {m.label}
               </option>
             ))}
           </Select>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => copy.mutate({ data: { tahun, fromBulan: copyFrom, toBulan: bulan } })}
+            onClick={() =>
+              copy.mutate({
+                data: { tahun, fromTahun: copyFromYear, fromBulan: copyFrom, toBulan: bulan },
+              })
+            }
           >
-            Salin gaji pokok
+            Salin gaji
           </Button>
         </div>
       </div>
@@ -275,10 +300,12 @@ export function PayrollGrid({
 
       {rows.length === 0 ? (
         <div className="glass rounded-[24px] px-6 py-12 text-center">
-          <p className="font-display text-xl font-semibold text-ink">Belum ada gaji bulan ini</p>
+          <p className="font-display text-xl font-semibold text-ink">
+            Belum ada gaji {MONTHS.find((m) => m.id === bulan)?.label} {tahun}
+          </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-            Isi gaji dari data karyawan. Tunjangan dan lembur diinput di popup; di rekapan, lembur
-            digabung ke kolom tunjangan.
+            Pilih tahun pajak, lalu isi gaji. Lembur diinput di popup; di rekapan digabung ke kolom
+            tunjangan.
           </p>
           <Button className="mt-5" onClick={openAdd}>
             <Plus className="size-4" />
@@ -286,85 +313,96 @@ export function PayrollGrid({
           </Button>
         </div>
       ) : (
-        <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-          <table className="sheet-grid min-w-[1180px] w-full text-left text-sm">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
-                <th className="px-3 py-2">PTKP</th>
-                <th className="px-3 py-2">Gaji</th>
-                <th className="px-3 py-2">Tunjangan</th>
-                <th className="px-3 py-2">Honor</th>
-                <th className="px-3 py-2">Bonus / THR</th>
-                <th className="px-3 py-2">Premi</th>
-                <th className="px-3 py-2">Tunj. PPh</th>
-                <th className="px-3 py-2">Bruto</th>
-                <th className="px-3 py-2">TER</th>
-                <th className="px-3 py-2">PPh 21</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ emp, line, calc, tunjanganRecap }) => (
-                <tr key={`${emp.id}-${bulan}`} className="hover:bg-accent-soft/40">
-                  <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
-                    <div>{emp.nama}</div>
-                    <div className="text-[11px] text-muted">{emp.jabatan}</div>
-                  </td>
-                  <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
-                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji, false)}</td>
-                  <td className="px-3 py-1.5 tabular-nums">
-                    {formatRp(tunjanganRecap, false)}
-                    {line.uangLembur ? (
-                      <div className="text-[11px] text-muted">
-                        termasuk lembur {formatRp(line.uangLembur, false)}
-                      </div>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.honorarium, false)}</td>
-                  <td className="px-3 py-1.5 tabular-nums">{formatRp(line.bonus + line.thr, false)}</td>
-                  <td className="cell-computed px-3 py-1.5 tabular-nums">
-                    {formatRp(calc.premi.totalAddBruto, false)}
-                  </td>
-                  <td className="cell-computed px-3 py-1.5 tabular-nums">
-                    {formatRp(calc.tunjanganPph, false)}
-                  </td>
-                  <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">
-                    {formatRp(calc.bruto, false)}
-                  </td>
-                  <td className="px-3 py-1.5 text-xs">
-                    {calc.kategoriTer}
-                    <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
-                  </td>
-                  <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">
-                    {formatRp(calc.pph, false)}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(emp, line)}>
-                        <Pencil className="size-3.5" />
-                        Ubah
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          remove.mutate({ data: { tahun, bulan, employeeId: emp.id } })
-                        }
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </td>
+        <div>
+          <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
+            <table className="sheet-grid min-w-[1180px] w-full text-left text-sm">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 px-3 py-2">Nama</th>
+                  <th className="px-3 py-2">PTKP</th>
+                  <th className="px-3 py-2">Gaji</th>
+                  <th className="px-3 py-2">Tunjangan</th>
+                  <th className="px-3 py-2">Honor</th>
+                  <th className="px-3 py-2">Bonus / THR</th>
+                  <th className="px-3 py-2">Premi</th>
+                  <th className="px-3 py-2">Tunj. PPh</th>
+                  <th className="px-3 py-2">Bruto</th>
+                  <th className="px-3 py-2">TER</th>
+                  <th className="px-3 py-2">PPh 21</th>
+                  <th className="px-3 py-2" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paged.rows.map(({ emp, line, calc, tunjanganRecap }) => (
+                  <tr key={`${emp.id}-${tahun}-${bulan}`} className="hover:bg-accent-soft/40">
+                    <td className="sticky left-0 z-10 bg-elevated px-3 py-1.5 font-medium">
+                      <div>{emp.nama}</div>
+                      <div className="text-[11px] text-muted">{emp.jabatan}</div>
+                    </td>
+                    <td className="px-3 py-1.5 tabular-nums">{emp.ptkp}</td>
+                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.gaji, false)}</td>
+                    <td className="px-3 py-1.5 tabular-nums">
+                      {formatRp(tunjanganRecap, false)}
+                      {line.uangLembur ? (
+                        <div className="text-[11px] text-muted">
+                          termasuk lembur {formatRp(line.uangLembur, false)}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.honorarium, false)}</td>
+                    <td className="px-3 py-1.5 tabular-nums">{formatRp(line.bonus + line.thr, false)}</td>
+                    <td className="cell-computed px-3 py-1.5 tabular-nums">
+                      {formatRp(calc.premi.totalAddBruto, false)}
+                    </td>
+                    <td className="cell-computed px-3 py-1.5 tabular-nums">
+                      {formatRp(calc.tunjanganPph, false)}
+                    </td>
+                    <td className="cell-computed px-3 py-1.5 tabular-nums font-semibold">
+                      {formatRp(calc.bruto, false)}
+                    </td>
+                    <td className="px-3 py-1.5 text-xs">
+                      {calc.kategoriTer}
+                      <div className="tabular-nums text-muted">{formatPct(calc.tarifTer)}</div>
+                    </td>
+                    <td className="px-3 py-1.5 tabular-nums font-semibold text-ink">
+                      {formatRp(calc.pph, false)}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(emp, line)}>
+                          <Pencil className="size-3.5" />
+                          Ubah
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            remove.mutate({ data: { tahun, bulan, employeeId: emp.id } })
+                          }
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <TablePager
+            total={paged.total}
+            page={paged.page}
+            pages={paged.pages}
+            from={paged.from}
+            to={paged.to}
+            pageSize={paged.pageSize}
+            onPage={paged.setPage}
+            onPageSize={paged.setPageSize}
+          />
         </div>
       )}
       <p className="text-xs text-muted">
-        Kolom tunjangan di rekapan = tunjangan + lembur. Perhitungan TER tetap memisahkan keduanya
-        sebagai penghasilan teratur, sama seperti workbook Excel.
+        Gaji tersimpan per tahun dan bulan. Kolom tunjangan di rekapan = tunjangan + lembur.
       </p>
 
       <GlassModal
@@ -390,6 +428,12 @@ export function PayrollGrid({
                 ))}
               </Select>
             )}
+          </Field>
+          <Field label="Tahun pajak">
+            <InputLocked value={String(tahun)} />
+          </Field>
+          <Field label="Bulan">
+            <InputLocked value={MONTHS.find((m) => m.id === bulan)?.label ?? String(bulan)} />
           </Field>
           <Field label="Gaji" hint="Dasar dari master karyawan">
             <MoneyInput value={form.gaji} onChange={(gaji) => setForm({ ...form, gaji })} />

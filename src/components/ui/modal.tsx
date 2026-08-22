@@ -32,7 +32,7 @@ export function GlassModal({
       return () => window.cancelAnimationFrame(id);
     }
     setVisible(false);
-    const t = window.setTimeout(() => setMounted(false), 180);
+    const t = window.setTimeout(() => setMounted(false), 160);
     return () => window.clearTimeout(t);
   }, [open]);
 

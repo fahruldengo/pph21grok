@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/app-shell";
+import { YearSelect } from "@/components/pph/year-select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/input";
 import { calculateMonthly } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS, terbilang } from "@/lib/pph/format";
+import { useTaxYear } from "@/lib/pph/tax-year";
 import { usePayroll, useWorkspace } from "@/lib/pph/use-workspace";
 
 export const Route = createFileRoute("/_app/bukti-potong/")({ component: BuktiPage });
@@ -14,7 +16,7 @@ function BuktiPage() {
   const ws = useWorkspace();
   const [bulan, setBulan] = useState(1);
   const [empId, setEmpId] = useState<number | null>(null);
-  const tahun = ws.data?.company.tahunPajak ?? 2026;
+  const { tahun, setTahun } = useTaxYear(ws.data?.company.tahunPajak ?? 2026);
   const pay = usePayroll(tahun, bulan);
   const employees = ws.data?.employees ?? [];
   const emp = employees.find((e) => e.id === empId) ?? employees[0];
@@ -56,7 +58,8 @@ function BuktiPage() {
           </Button>
         }
       />
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <YearSelect value={tahun} onChange={setTahun} />
         <Select value={String(emp?.id ?? "")} onChange={(e) => setEmpId(Number(e.target.value))}>
           {employees.map((e) => (
             <option key={e.id} value={e.id}>

@@ -14,7 +14,7 @@ Buku kerja spreadsheet — TER A/B/C, gross-up, BPJS, rekonsiliasi Desember (Pas
 | `/pemotong` | PEMOTONG | Identitas pemberi kerja & penanda tangan |
 | `/elemen` | ELEMEN PPh 21 | Tarif premi BPJS (JKK, JKM, JHT, JP, Kes) |
 | `/karyawan` | DATA PEGAWAI | Master karyawan, PTKP, gaji pokok, tunjangan |
-| `/penghasilan` | JAN–DES | Popup tambah gaji (lembur masuk kolom tunjangan) |
+| `/penghasilan` | JAN–DES | Gaji per tahun & bulan, tampil 5–100 baris |
 | `/spreadsheet` | seluruh tab | Buku kerja dengan tab bulan |
 | `/kalkulator` | KALKULATOR PPH 21 | Hitung seorang karyawan (ROUNDDOWN) |
 | `/tahunan` | TAHUNAN / DES | Pasal 17, biaya jabatan, kurang/lebih bayar |
@@ -27,7 +27,7 @@ Buku kerja spreadsheet — TER A/B/C, gross-up, BPJS, rekonsiliasi Desember (Pas
 
 Masuk dengan Google, X, atau email & kata sandi. Data perusahaan, karyawan, dan payroll bersifat per pengguna.
 
-Akun baru mendapat identitas perusahaan **CV. Vidya Amaliah** dan tarif BPJS, tanpa data karyawan. Isi gaji pokok + tunjangan di menu Karyawan, lalu tambah gaji bulanan lewat popup (termasuk lembur, yang di rekapan masuk kolom tunjangan).
+Akun baru mendapat identitas perusahaan **CV. Vidya Amaliah** dan tarif BPJS, tanpa data karyawan. Gaji tersimpan per tahun pajak (2020–2040+) sehingga buku kerja bisa dipakai jangka panjang. Tabel punya filter tampilan 5 / 10 / 25 / 50 / 100 baris.
 
 ## Rumus (sumber kebenaran: Excel)
 

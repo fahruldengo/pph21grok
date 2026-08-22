@@ -261,12 +261,15 @@ export async function deletePayroll(
   return { ok: true };
 }
 
-export async function copyMonth(input: DataArg<{ tahun: number; fromBulan: number; toBulan: number }>) {
+export async function copyMonth(
+  input: DataArg<{ tahun: number; fromTahun?: number; fromBulan: number; toBulan: number }>,
+) {
   const data = unwrap(input);
   const userId = uid();
   const db = load(userId);
+  const fromTahun = data.fromTahun ?? data.tahun;
   const tgl = lastDayOfMonth(data.tahun, data.toBulan);
-  const src = db.payroll.filter((p) => p.tahun === data.tahun && p.bulan === data.fromBulan);
+  const src = db.payroll.filter((p) => p.tahun === fromTahun && p.bulan === data.fromBulan);
   for (const row of src) {
     const idx = db.payroll.findIndex(
       (p) => p.employeeId === row.employeeId && p.tahun === data.tahun && p.bulan === data.toBulan,
@@ -274,6 +277,7 @@ export async function copyMonth(input: DataArg<{ tahun: number; fromBulan: numbe
     const next: PayrollLine = {
       ...row,
       id: idx >= 0 ? db.payroll[idx].id : db.nextPay++,
+      tahun: data.tahun,
       bulan: data.toBulan,
       bonus: 0,
       thr: 0,

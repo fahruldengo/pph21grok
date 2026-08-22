@@ -433,16 +433,18 @@ export const copyMonth = createServerFn({ method: "POST" })
   .validator(
     z.object({
       tahun: z.number(),
+      fromTahun: z.number().optional(),
       fromBulan: z.number(),
       toBulan: z.number(),
     }),
   )
   .handler(async ({ context, data }) => {
     const sql = await getSql();
+    const fromTahun = data.fromTahun ?? data.tahun;
     const tgl = lastDayOfMonth(data.tahun, data.toBulan);
     const src = await sql<Record<string, unknown>>`
       select * from payroll_lines
-      where user_id = ${context.userId} and tahun = ${data.tahun} and bulan = ${data.fromBulan}
+      where user_id = ${context.userId} and tahun = ${fromTahun} and bulan = ${data.fromBulan}
     `;
     for (const row of src) {
       const empId = num(row.employee_id);

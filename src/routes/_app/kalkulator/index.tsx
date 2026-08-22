@@ -1,19 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/app-shell";
+import { YearSelect } from "@/components/pph/year-select";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/input";
 import { calculateMonthly } from "@/lib/pph/calculate";
 import { formatPct, formatRp, MONTHS, terbilang } from "@/lib/pph/format";
 import { PTKP_STATUSES } from "@/lib/pph/ptkp";
-import { usePayroll, useWorkspace } from "@/lib/pph/use-workspace";
+import { useTaxYear } from "@/lib/pph/tax-year";
+import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 
 export const Route = createFileRoute("/_app/kalkulator/")({ component: KalkulatorPage });
 
 function KalkulatorPage() {
   const ws = useWorkspace();
-  const tahun = ws.data?.company.tahunPajak ?? 2026;
-  const pay = usePayroll(tahun, 1);
+  const { tahun, setTahun } = useTaxYear(ws.data?.company.tahunPajak ?? 2026);
+  const pay = useYearPayroll(tahun);
   const [nama, setNama] = useState("");
   const [ptkp, setPtkp] = useState("TK/0");
   const [grossUp, setGrossUp] = useState("Yes");
@@ -58,7 +60,9 @@ function KalkulatorPage() {
     setPtkp(emp.ptkp);
     setGrossUp(emp.grossUp ? "Yes" : "No");
     setNpwp(emp.punyaNpwp ? "YA" : "TIDAK");
-    const line = pay.data?.find((l) => l.employeeId === emp.id);
+    const line =
+      pay.data?.find((l) => l.employeeId === emp.id && l.bulan === 1) ??
+      pay.data?.find((l) => l.employeeId === emp.id);
     if (line) {
       setGaji(line.gaji);
       setTunjangan(line.tunjangan);
@@ -78,9 +82,10 @@ function KalkulatorPage() {
   return (
     <div>
       <PageHeader
-        kicker="Sheet KALKULATOR PPH 21"
+        kicker={`Sheet KALKULATOR PPH 21 · ${tahun}`}
         title="Kalkulator seorang karyawan"
         description="Rumus mengikuti workbook: premi dari gaji pokok, TER sesuai PTKP, PPh dibulatkan ke bawah."
+        actions={<YearSelect value={tahun} onChange={setTahun} />}
       />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

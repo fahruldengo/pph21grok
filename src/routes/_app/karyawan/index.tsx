@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/app-shell";
+import { TablePager, usePaged } from "@/components/pph/table-pager";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, MoneyInput, Select } from "@/components/ui/input";
@@ -59,6 +60,12 @@ function KaryawanPage() {
   const employees = (ws.data?.employees ?? []).filter((e) =>
     `${e.nama} ${e.nik} ${e.jabatan}`.toLowerCase().includes(q.toLowerCase()),
   );
+  const paged = usePaged(employees, "karyawan", 10);
+  const { resetPage } = paged;
+
+  useEffect(() => {
+    resetPage();
+  }, [q, resetPage]);
 
   return (
     <div>
@@ -176,46 +183,58 @@ function KaryawanPage() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
-          <table className="sheet-grid w-full min-w-[980px] text-left text-sm">
-            <thead>
-              <tr>
-                <th className="px-3 py-2">Nama</th>
-                <th className="px-3 py-2">Jabatan</th>
-                <th className="px-3 py-2">NIK</th>
-                <th className="px-3 py-2">PTKP</th>
-                <th className="px-3 py-2">Gaji</th>
-                <th className="px-3 py-2">Tunjangan</th>
-                <th className="px-3 py-2">TER</th>
-                <th className="px-3 py-2">Gross-up</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-3 py-2 font-medium">{e.nama}</td>
-                  <td className="px-3 py-2 text-muted">{e.jabatan}</td>
-                  <td className="px-3 py-2 tabular-nums">{e.nik}</td>
-                  <td className="px-3 py-2">{e.ptkp}</td>
-                  <td className="px-3 py-2 tabular-nums">{formatRp(e.gaji, false)}</td>
-                  <td className="px-3 py-2 tabular-nums">{formatRp(e.tunjangan, false)}</td>
-                  <td className="px-3 py-2">{terCategory(e.ptkp)}</td>
-                  <td className="px-3 py-2">{e.grossUp ? "Ya" : "Tidak"}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(toForm(e))}>
-                        Ubah
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: e.id } })}>
-                        Hapus
-                      </Button>
-                    </div>
-                  </td>
+        <div>
+          <div className="overflow-auto rounded-[20px] border border-border bg-elevated">
+            <table className="sheet-grid w-full min-w-[980px] text-left text-sm">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2">Nama</th>
+                  <th className="px-3 py-2">Jabatan</th>
+                  <th className="px-3 py-2">NIK</th>
+                  <th className="px-3 py-2">PTKP</th>
+                  <th className="px-3 py-2">Gaji</th>
+                  <th className="px-3 py-2">Tunjangan</th>
+                  <th className="px-3 py-2">TER</th>
+                  <th className="px-3 py-2">Gross-up</th>
+                  <th className="px-3 py-2" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paged.rows.map((e) => (
+                  <tr key={e.id}>
+                    <td className="px-3 py-2 font-medium">{e.nama}</td>
+                    <td className="px-3 py-2 text-muted">{e.jabatan}</td>
+                    <td className="px-3 py-2 tabular-nums">{e.nik}</td>
+                    <td className="px-3 py-2">{e.ptkp}</td>
+                    <td className="px-3 py-2 tabular-nums">{formatRp(e.gaji, false)}</td>
+                    <td className="px-3 py-2 tabular-nums">{formatRp(e.tunjangan, false)}</td>
+                    <td className="px-3 py-2">{terCategory(e.ptkp)}</td>
+                    <td className="px-3 py-2">{e.grossUp ? "Ya" : "Tidak"}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(toForm(e))}>
+                          Ubah
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => del.mutate({ data: { id: e.id } })}>
+                          Hapus
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <TablePager
+            total={paged.total}
+            page={paged.page}
+            pages={paged.pages}
+            from={paged.from}
+            to={paged.to}
+            pageSize={paged.pageSize}
+            onPage={paged.setPage}
+            onPageSize={paged.setPageSize}
+          />
         </div>
       )}
     </div>

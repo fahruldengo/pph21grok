@@ -50,8 +50,6 @@
   --motion-y-medium: 12px;
   --motion-scale-modal: 0.96;
   --motion-scale-menu: 0.97;
-  --motion-blur-sm: 2px;
-  --motion-blur-md: 3px;
 }
 
 @layer base {
@@ -99,12 +97,16 @@
     overflow: hidden;
     pointer-events: none;
     background: #b7cae0;
+    contain: paint;
   }
   .liquid-bg .orb {
     position: absolute;
     border-radius: 999px;
     filter: blur(80px);
     will-change: transform;
+    contain: layout style;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
   }
   .liquid-bg .orb-sky {
     width: 62vw;
@@ -213,9 +215,9 @@
     font-weight: 500;
     letter-spacing: -0.01em;
     color: var(--color-fg);
-    transition:
-      background-color var(--motion-quick) var(--ease-smooth-out),
-      transform var(--motion-micro) var(--ease-smooth-out);
+    transition-property: background-color, transform;
+    transition-duration: var(--motion-quick), var(--motion-micro);
+    transition-timing-function: var(--ease-smooth-out);
   }
   .nav-pill:hover {
     background: rgb(255 255 255 / 0.32);
@@ -256,20 +258,25 @@
   .drawer-backdrop {
     position: absolute;
     inset: 0;
-    background: rgb(28 28 30 / 0.25);
-    backdrop-filter: blur(8px);
+    background: rgb(28 28 30 / 0.32);
     opacity: 0;
-    transition: opacity var(--motion-quick) var(--ease-smooth-out);
+    transition-property: opacity;
+    transition-duration: var(--motion-quick);
+    transition-timing-function: var(--ease-smooth-out);
   }
   .drawer-root.is-open .drawer-backdrop {
     opacity: 1;
   }
   .drawer-panel {
-    transform: translateX(-108%);
-    transition: transform var(--motion-fast) var(--ease-smooth-out);
+    transform: translate3d(-108%, 0, 0);
+    backface-visibility: hidden;
+    transition-property: transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease-smooth-out);
   }
   .drawer-root.is-open .drawer-panel {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
   }
   .drawer-root:not(.is-open) .drawer-panel {
     transition-duration: var(--motion-quick);
@@ -286,10 +293,11 @@
   .modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgb(28 28 30 / 0.28);
-    backdrop-filter: blur(10px);
+    background: rgb(28 28 30 / 0.38);
     opacity: 0;
-    transition: opacity var(--motion-quick) var(--ease-smooth-out);
+    transition-property: opacity;
+    transition-duration: var(--motion-quick);
+    transition-timing-function: var(--ease-smooth-out);
   }
   .modal-panel {
     position: relative;
@@ -298,10 +306,13 @@
     max-height: min(90vh, 820px);
     overflow: auto;
     opacity: 0;
-    transform: translateY(var(--motion-y-medium)) scale(var(--motion-scale-modal));
-    transition:
-      opacity var(--motion-fast) var(--ease-smooth-out),
-      transform var(--motion-fast) var(--ease-smooth-out);
+    transform: translate3d(0, var(--motion-y-medium), 0) scale(var(--motion-scale-modal));
+    backface-visibility: hidden;
+    contain: layout paint;
+    will-change: transform, opacity;
+    transition-property: opacity, transform;
+    transition-duration: var(--motion-fast);
+    transition-timing-function: var(--ease-smooth-out);
   }
   .modal-panel-wide {
     width: min(640px, 100%);
@@ -311,7 +322,7 @@
   }
   .modal-root.is-open .modal-panel {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   .modal-root:not(.is-open) .modal-panel {
     transition-duration: var(--motion-quick);
@@ -346,13 +357,21 @@
 @keyframes page-rise {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-y-medium));
-    filter: blur(var(--motion-blur-md));
+    transform: translate3d(0, var(--motion-y-medium), 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .liquid-bg .orb-peach,
+  .liquid-bg .orb-fog {
+    display: none;
+  }
+  .liquid-bg .orb {
+    filter: blur(56px);
   }
 }
 
@@ -365,6 +384,11 @@
   }
   .liquid-bg .orb {
     animation: none !important;
+    will-change: auto;
+  }
+  .modal-panel,
+  .drawer-panel {
+    will-change: auto;
   }
 }
 

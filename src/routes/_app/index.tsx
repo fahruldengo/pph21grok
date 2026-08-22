@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/layout/app-shell";
+import { YearSelect } from "@/components/pph/year-select";
 import { Card } from "@/components/ui/card";
 import { useWorkspace, useYearPayroll } from "@/lib/pph/use-workspace";
 import { calculateAnnual, calculateMonthly } from "@/lib/pph/calculate";
 import { formatRp, MONTHS } from "@/lib/pph/format";
+import { useTaxYear } from "@/lib/pph/tax-year";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowUpRight } from "lucide-react";
 
@@ -11,8 +13,8 @@ export const Route = createFileRoute("/_app/")({ component: Dashboard });
 
 function Dashboard() {
   const ws = useWorkspace();
-  const year = ws.data?.company.tahunPajak ?? 2026;
-  const pay = useYearPayroll(year);
+  const { tahun, setTahun } = useTaxYear(ws.data?.company.tahunPajak ?? 2026);
+  const pay = useYearPayroll(tahun);
 
   if (ws.isLoading || !ws.data) {
     return <div className="glass h-40 animate-pulse rounded-[28px]" />;
@@ -120,7 +122,8 @@ function Dashboard() {
       <PageHeader
         kicker={company.nama}
         title="Ringkasan pemotongan"
-        description={`Tahun pajak ${year}. Mulai dari karyawan kosong: isi master gaji, lalu tambah gaji bulanan lewat popup.`}
+        description={`Tahun pajak ${tahun}. Ganti tahun untuk melihat arsip gaji dan PPh jangka panjang.`}
+        actions={<YearSelect value={tahun} onChange={setTahun} />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -161,7 +164,7 @@ function Dashboard() {
           <p className="relative z-10 text-[13px] font-medium text-muted">Lanjut kerja</p>
           <ul className="relative z-10 mt-4 space-y-2">
             {[
-              { to: "/penghasilan", title: "Isi penghasilan bulan berjalan", sub: "Spreadsheet biru/hijau" },
+              { to: "/penghasilan", title: "Isi penghasilan bulan berjalan", sub: "Popup gaji + lembur" },
               { to: "/kalkulator", title: "Uji TER seorang karyawan", sub: "Kalkulator PPh 21" },
               { to: "/tahunan", title: "Hitung Desember / A1", sub: "Pasal 17 minus TER YTD" },
               { to: "/bukti-potong", title: "Siapkan bukti potong", sub: "BPMP, A1, BP21" },
@@ -169,7 +172,7 @@ function Dashboard() {
               <li key={x.to}>
                 <Link
                   to={x.to}
-                  className="flex items-center justify-between rounded-[18px] border border-white/50 bg-white/35 px-4 py-3 transition-colors hover:bg-white/55"
+                  className="flex items-center justify-between rounded-[18px] border border-white/50 bg-white/35 px-4 py-3 transition-[background-color] duration-150 hover:bg-white/55"
                 >
                   <span>
                     <span className="block text-sm font-semibold">{x.title}</span>
