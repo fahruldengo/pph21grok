@@ -236,12 +236,15 @@
   .nav-group-toggle {
     display: flex;
     width: 100%;
+    min-height: 40px;
     align-items: center;
     justify-content: space-between;
     border-radius: 12px;
-    padding: 0.35rem 0.75rem;
-    font-size: 11px;
+    padding: 0.45rem 0.75rem;
+    font-size: 12px;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
     color: var(--color-subtle);
     transition-property: background-color, color;
     transition-duration: var(--motion-quick);
@@ -251,28 +254,72 @@
     background: rgb(255 255 255 / 0.28);
     color: var(--color-fg);
   }
-  .nav-group-body {
-    display: grid;
-    grid-template-rows: 0fr;
-    overflow: hidden;
-    transition-property: grid-template-rows;
-    transition-duration: var(--motion-fast);
-    transition-timing-function: var(--ease-smooth-out);
-  }
-  .nav-group-body.is-open {
-    grid-template-rows: 1fr;
-  }
-  .nav-group-body > ul {
-    overflow: hidden;
-    min-height: 0;
-  }
   .nav-chevron {
     transition-property: transform;
     transition-duration: var(--motion-quick);
     transition-timing-function: var(--ease-smooth-out);
   }
   .nav-chevron.is-open {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
+  }
+
+  .sidebar-toggle {
+    display: inline-flex;
+    height: 44px;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0 0.95rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-ink);
+    transition-property: background-color, transform;
+    transition-duration: var(--motion-quick);
+    transition-timing-function: var(--ease-smooth-out);
+  }
+  .sidebar-toggle:hover {
+    background: rgb(255 255 255 / 0.45);
+  }
+  .sidebar-toggle:active {
+    transform: scale(0.96);
+  }
+
+  .sidebar-slot {
+    display: none;
+  }
+  @media (min-width: 768px) {
+    .sidebar-slot {
+      display: grid;
+      grid-template-columns: 0fr;
+      min-width: 0;
+      margin-right: 0;
+      overflow: hidden;
+      pointer-events: none;
+      transition-property: grid-template-columns, margin-right;
+      transition-duration: var(--motion-fast);
+      transition-timing-function: var(--ease-smooth-out);
+    }
+    .sidebar-slot.is-open {
+      grid-template-columns: 1fr;
+      margin-right: 0.75rem;
+      pointer-events: auto;
+    }
+    .sidebar-slot > div {
+      min-width: 0;
+      overflow: hidden;
+    }
+    .sidebar-slot aside {
+      width: 248px;
+      height: calc(100vh - 88px);
+    }
+  }
+  .sidebar-desk-inner {
+    display: flex;
+    height: 100%;
+    width: 248px;
+    flex-direction: column;
+    padding: 1rem 0.75rem;
   }
 
   .page-enter .page-kicker,

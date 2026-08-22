@@ -6,7 +6,8 @@ import {
   Building2,
   Calculator,
   CalendarRange,
-  ChevronDown,
+  ChevronRight,
+  ChevronsLeft,
   FileSpreadsheet,
   LayoutDashboard,
   Library,
@@ -58,6 +59,7 @@ const NAV = [
 ];
 
 const NAV_KEY = "pajak21.nav-open";
+const SIDEBAR_KEY = "pajak21.sidebar";
 
 function readNavOpen(): Record<string, boolean> {
   try {
@@ -66,6 +68,14 @@ function readNavOpen(): Record<string, boolean> {
     return JSON.parse(raw) as Record<string, boolean>;
   } catch {
     return {};
+  }
+}
+
+function readSidebarOpen() {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) !== "0";
+  } catch {
+    return true;
   }
 }
 
@@ -82,7 +92,22 @@ export function LiquidBackdrop() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, isPending } = useCurrentUserState();
-  const [open, setOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window === "undefined" ? true : readSidebarOpen(),
+  );
+
+  function toggleSidebar() {
+    setSidebarOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   if (isPending) {
     return (
@@ -109,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             className="grid size-11 place-items-center rounded-full"
-            onClick={() => setOpen(true)}
+            onClick={() => setDrawerOpen(true)}
             aria-label="Buka menu"
           >
             <Menu className="size-5" />
@@ -124,70 +149,101 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <div className={`fixed inset-0 z-40 md:hidden ${open ? "drawer-root is-open" : "drawer-root"}`}>
+      <div className={`fixed inset-0 z-40 md:hidden ${drawerOpen ? "drawer-root is-open" : "drawer-root"}`}>
         <button
           type="button"
           className="drawer-backdrop"
-          onClick={() => setOpen(false)}
+          onClick={() => setDrawerOpen(false)}
           aria-label="Tutup menu"
-          tabIndex={open ? 0 : -1}
+          tabIndex={drawerOpen ? 0 : -1}
         />
         <aside className="drawer-panel glass absolute inset-y-2 left-2 w-[84%] max-w-xs overflow-y-auto rounded-[28px] p-4">
           <div className="relative z-10 mb-4 flex items-center justify-between">
             <Brand />
-            <button type="button" onClick={() => setOpen(false)} className="grid size-11 place-items-center">
+            <button type="button" onClick={() => setDrawerOpen(false)} className="grid size-11 place-items-center">
               <X className="size-5" />
             </button>
           </div>
           <div className="relative z-10">
-            <Nav onNavigate={() => setOpen(false)} />
+            <Nav idPrefix="mobile" onNavigate={() => setDrawerOpen(false)} />
           </div>
         </aside>
       </div>
 
-      <div className="relative z-10 hidden px-3 pt-3 md:flex md:justify-end">
-        <div className="glass rounded-full px-4 py-2">
-          <SystemClock />
-        </div>
-      </div>
-
-      <div className="relative z-10 md:flex md:gap-3 md:p-3 md:pt-2">
-        <aside className="glass sticky top-3 hidden h-[calc(100vh-72px)] w-[248px] shrink-0 flex-col overflow-y-auto rounded-[28px] px-3 py-4 md:flex">
-          <div className="relative z-10 flex h-full flex-col">
-            <Brand />
-            <div className="mt-6 flex-1">
-              <Nav />
-            </div>
-            <div className="border-t border-white/30 pt-3">
+      <div className="relative z-10 hidden md:block">
+        <header className="px-3 pt-3">
+          <div className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3">
+            <button
+              type="button"
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-expanded={sidebarOpen}
+              aria-controls="app-sidebar"
+            >
+              {sidebarOpen ? <ChevronsLeft className="size-4" /> : <Menu className="size-4" />}
+              <span>{sidebarOpen ? "Sembunyikan menu" : "Tampilkan menu"}</span>
+            </button>
+            {!sidebarOpen ? <Brand compact /> : null}
+            <div className="ml-auto flex min-w-0 items-center gap-3">
+              <SystemClock />
               <UserButton />
             </div>
           </div>
-        </aside>
+        </header>
+      </div>
+
+      <div className="relative z-10 md:flex md:p-3 md:pt-2">
+        <div
+          id="app-sidebar"
+          className={cn("sidebar-slot", sidebarOpen && "is-open")}
+          aria-hidden={!sidebarOpen}
+        >
+          <div>
+            <aside className="glass sticky top-3 rounded-[28px]">
+              <div className="sidebar-desk-inner">
+                <Brand />
+                <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
+                  <Nav idPrefix="desk" />
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
         <main className="glass min-w-0 flex-1 rounded-[28px] px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
     </div>
   );
 }
 
-function Brand() {
+function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link to="/" className="flex items-center gap-2.5 px-2">
-      <span className="grid size-9 place-items-center rounded-[12px] bg-accent text-accent-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.35)]">
+    <Link to="/" className={cn("flex items-center gap-2.5", compact ? "px-1" : "px-2")}>
+      <span
+        className={cn(
+          "grid place-items-center bg-accent text-accent-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.35)]",
+          compact ? "size-8 rounded-[10px]" : "size-9 rounded-[12px]",
+        )}
+      >
         <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden>
           <path d="M6 8h20v3H6zM6 14.5h12v3H6zM6 21h20v3H6z" fill="currentColor" />
         </svg>
       </span>
       <span>
-        <span className="block font-display text-[17px] font-semibold leading-none tracking-tight text-ink">
+        <span
+          className={cn(
+            "block font-display font-semibold leading-none tracking-tight text-ink",
+            compact ? "text-[15px]" : "text-[17px]",
+          )}
+        >
           Pajak21
         </span>
-        <span className="text-[11px] font-medium text-muted">PPh Pasal 21</span>
+        {compact ? null : <span className="text-[11px] font-medium text-muted">PPh Pasal 21</span>}
       </span>
     </Link>
   );
 }
 
-function Nav({ onNavigate }: { onNavigate?: () => void }) {
+function Nav({ onNavigate, idPrefix = "nav" }: { onNavigate?: () => void; idPrefix?: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [openMap, setOpenMap] = useState<Record<string, boolean>>(() =>
     typeof window === "undefined" ? {} : readNavOpen(),
@@ -206,9 +262,10 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <nav className="space-y-2">
+    <nav className="space-y-1.5">
       {NAV.map((group) => {
         const expanded = openMap[group.label] ?? true;
+        const panelId = `${idPrefix}-${group.label.toLowerCase()}`;
         return (
           <div key={group.label}>
             <button
@@ -216,12 +273,13 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
               className="nav-group-toggle"
               onClick={() => toggle(group.label)}
               aria-expanded={expanded}
+              aria-controls={panelId}
             >
               <span>{group.label}</span>
-              <ChevronDown className={cn("nav-chevron size-3.5", expanded && "is-open")} />
+              <ChevronRight className={cn("nav-chevron size-3.5", expanded && "is-open")} />
             </button>
-            <div className={cn("nav-group-body", expanded && "is-open")}>
-              <ul className="space-y-0.5 pt-0.5">
+            {expanded ? (
+              <ul id={panelId} className="space-y-0.5 pb-1 pt-0.5">
                 {group.items.map((item) => {
                   const active =
                     item.to === "/"
@@ -242,7 +300,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
                   );
                 })}
               </ul>
-            </div>
+            ) : null}
           </div>
         );
       })}
